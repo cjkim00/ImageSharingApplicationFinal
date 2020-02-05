@@ -20,6 +20,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -52,21 +53,13 @@ public class PostFragment extends Fragment {
     public PostFragment() {
     }
 
-    // TODO: Customize parameter initialization
-    @SuppressWarnings("unused")
-    public static PostFragment newInstance(int columnCount) {
-        PostFragment fragment = new PostFragment();
-        Bundle args = new Bundle();
-        args.putInt(ARG_COLUMN_COUNT, columnCount);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mPosts = new ArrayList<Post>();
-        //mEmail =
+        Bundle args = getArguments();
+
+        mEmail = Objects.requireNonNull(args).getString("Email");
 
         //mEmail = getArguments().getString(ARG_EMAIL);
         //Toast.makeText(getContext(),"Email: " + mEmail ,Toast.LENGTH_LONG).show();
@@ -142,7 +135,7 @@ public class PostFragment extends Fragment {
                     conn.connect();
 
                     JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", "cjkim112@gmail.com");
+                    jsonParam.put("User", mEmail);
                     DataOutputStream os = new DataOutputStream(conn.getOutputStream());
                     os.writeBytes(jsonParam.toString());
                     os.flush();

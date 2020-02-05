@@ -1,8 +1,5 @@
 package cjkim00.imagesharingapplicationfinal.Post;
 
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
@@ -17,11 +14,13 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
-import cjkim00.imagesharingapplicationfinal.Post.PostFragment.OnListFragmentInteractionListener;
-import cjkim00.imagesharingapplicationfinal.R;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import cjkim00.imagesharingapplicationfinal.Post.PostFragment.OnListFragmentInteractionListener;
+import cjkim00.imagesharingapplicationfinal.R;
 
 
 public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecyclerViewAdapter.ViewHolder> {
@@ -73,14 +72,14 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(location);
         final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
             @Override
             public void onSuccess(byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                 imageView.setImageBitmap(bitmap);
                 mBitmap = bitmap;
                 post.setByteArray(bytes);
-                Log.i("MSG" , "Array Size2: " + bytes.length);
             }
         }).addOnFailureListener(new OnFailureListener() {
             @Override

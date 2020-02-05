@@ -61,7 +61,8 @@ public class ImageViewerActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         PostFragment.OnListFragmentInteractionListener,
         SearchFragment.OnListFragmentInteractionListener,
-        ProfileFragment.OnListFragmentInteractionListener {
+        ProfileFragment.OnListFragmentInteractionListener,
+        ManageFragment.OnListFragmentInteractionListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
@@ -78,9 +79,12 @@ public class ImageViewerActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
 
-        mUserProfileImage = findViewById(R.id.imageView_user_profile_image_nav_header_image_viewer);
-        mUserUsername = findViewById(R.id.textView_user_username_nav_header_image_viewer);
-        mUserFollowInfo = findViewById(R.id.textView_user_follow_info_nav_header_image_viewer);
+        NavigationView navigationView = findViewById(R.id.nav_view);
+        View headerView = navigationView.getHeaderView(0);
+        mUserProfileImage = headerView.findViewById(R.id.imageView_user_profile_image_nav_header_image_viewer);
+        mUserUsername = headerView.findViewById(R.id.textView_user_username_nav_header_image_viewer);
+        mUserFollowInfo = headerView.findViewById(R.id.textView_user_follow_info_nav_header_image_viewer);
+
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -98,16 +102,19 @@ public class ImageViewerActivity extends AppCompatActivity
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        //NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         Intent intent = getIntent();
         mUser = (FirebaseUser) intent.getExtras().get("User");
         mEmail = mUser.getEmail();
-
+        Log.i("MSG1", "Email: " + mUser.getEmail() + ", " + mEmail);
         setUserInfo();
-
-        addFragment(new PostFragment());
+        PostFragment postFragment = new PostFragment();
+        Bundle args = new Bundle();
+        args.putString("Email", mEmail);
+        postFragment.setArguments(args);
+        addFragment(postFragment);
     }
 
     @Override
@@ -147,11 +154,19 @@ public class ImageViewerActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_home) {
-            replaceFragment(new PostFragment());
+            Bundle args = new Bundle();
+            args.putString("Email", mEmail);
+            PostFragment postFragment = new PostFragment();
+            postFragment.setArguments(args);
+            replaceFragment(postFragment);
         } else if (id == R.id.nav_profile) {
             //replaceFragment(new ProfileFragment());
         } else if (id == R.id.nav_view_followers) {
-            replaceFragment(new ManageFragment());
+            Bundle args = new Bundle();
+            args.putString("Email", mEmail);
+            ManageFragment manageFragment = new ManageFragment();
+            manageFragment.setArguments(args);
+            replaceFragment(manageFragment);
         } else if (id == R.id.nav_search) {
             replaceFragment(new SearchFragment());
         } else if (id == R.id.nav_liked_posts) {
@@ -210,7 +225,7 @@ public class ImageViewerActivity extends AppCompatActivity
                                 sb.append(line);
                             }
                             br.close();
-                            Log.i("MSG1", sb.toString());
+                            Log.i("MSG1", "Array in String format: " + sb.toString());
                             getResults(sb.toString());
                     }
 
@@ -229,13 +244,18 @@ public class ImageViewerActivity extends AppCompatActivity
     }
 
     public void getResults(String result) {
+        Log.i("MSG1", "Reaches getResults method.");
         try {
+            Log.i("MSG1", "Reaches getResults method's try.");
             JSONObject root = new JSONObject(result);
             //if (root.has("success") && root.getBoolean("success") ) {
                 //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
+            Log.i("MSG1", "data's length: " + data.length());
+
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonObject = data.getJSONObject(0);
+                    Log.i("MSG1", "Data values: " + jsonObject.getString("username"));
                     mUserUsername.setText(jsonObject.getString("username"));
                     mUserFollowInfo.setText("Followers: " + jsonObject.getInt("followingtotal")
                             + " Following: " + jsonObject.getInt("followingtotal"));
@@ -256,7 +276,8 @@ public class ImageViewerActivity extends AppCompatActivity
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(location);
         final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
             @Override
             public void onSuccess(byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
@@ -285,14 +306,11 @@ public class ImageViewerActivity extends AppCompatActivity
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
         fragmentTransaction.add(R.id.layout_image_viewer, fragment);
-        //fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+        fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
         fragmentTransaction.commit();
     }
 
-    public void replaceSearchFragment(Fragment fragment, Bundle args) {
-        if(args != null) {
-            fragment.setArguments(args);
-        }
+    public void replaceFragmentAndAddToBackStack(Fragment fragment) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
@@ -441,7 +459,10 @@ public class ImageViewerActivity extends AppCompatActivity
         hideSoftKeyboard();
 
         EditText search = findViewById(R.id.editText_search_fragment_search);
-        search.clearFocus();
+        if(search != null) {
+            search.clearFocus();
+        }
+
         Bundle args = new Bundle();
         args.putString("CurrentUser", mUser.getEmail());
         args.putString("Username", member.getUsername());
@@ -449,7 +470,10 @@ public class ImageViewerActivity extends AppCompatActivity
         args.putString("Location", member.getProfileImageLocation());
         args.putInt("Followers", member.getFollowers());
         args.putInt("Following", member.getFollowing());
-        replaceSearchFragment(new ProfileFragment(), args);
+
+        ProfileFragment profileFragment = new ProfileFragment();
+        profileFragment.setArguments(args);
+        replaceFragmentAndAddToBackStack(profileFragment);
     }
 
     @Override
