@@ -1,4 +1,4 @@
-package cjkim00.imagesharingapplicationfinal;
+package cjkim00.imagesharingapplicationfinal.Profile;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -17,7 +17,8 @@ import java.util.List;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
-import cjkim00.imagesharingapplicationfinal.ProfileFragment.OnListFragmentInteractionListener;
+import cjkim00.imagesharingapplicationfinal.Profile.ProfileFragment.OnListFragmentInteractionListener;
+import cjkim00.imagesharingapplicationfinal.R;
 
 public class MyProfileRecyclerViewAdapter extends RecyclerView.Adapter<MyProfileRecyclerViewAdapter.ViewHolder> {
 
@@ -85,10 +86,5 @@ public class MyProfileRecyclerViewAdapter extends RecyclerView.Adapter<MyProfile
             mView = view;
             mImageView = view.findViewById(R.id.imageView_image_thumbnail_fragment_profilev2);
         }
-
-//        @Override
-//        public String toString() {
-//            return super.toString() + " '" + mContentView.getText() + "'";
-//        }
     }
 }

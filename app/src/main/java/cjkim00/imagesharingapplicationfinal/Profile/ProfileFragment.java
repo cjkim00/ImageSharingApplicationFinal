@@ -1,4 +1,4 @@
-package cjkim00.imagesharingapplicationfinal;
+package cjkim00.imagesharingapplicationfinal.Profile;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -37,6 +37,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
+import cjkim00.imagesharingapplicationfinal.R;
 import cjkim00.imagesharingapplicationfinal.Search.Member;
 
 /**
@@ -366,7 +367,6 @@ public class ProfileFragment extends Fragment {
     }
 
     private void getPostsFromUser(String user) throws InterruptedException {
-        //List<Post> tempArray = new ArrayList<>();
         Thread thread = new Thread( new Runnable() {
             @Override
             public void run() {
@@ -410,7 +410,6 @@ public class ProfileFragment extends Fragment {
                             br.close();
                             Log.i("get posts: ", sb.toString());
                             getResults(sb.toString());
-                            //Log.i("MSG", "POST ARRAY: " + tempArray.toString());
                     }
 
                 } catch (Exception e) {

@@ -37,6 +37,7 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -49,24 +50,29 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import cjkim00.imagesharingapplicationfinal.Follow.ManageFragment;
+import cjkim00.imagesharingapplicationfinal.Follow.ViewFollowersFragment;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
-import cjkim00.imagesharingapplicationfinal.ProfileFragment;
+import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
+import cjkim00.imagesharingapplicationfinal.Profile.ProfileFragment;
 import cjkim00.imagesharingapplicationfinal.R;
 import cjkim00.imagesharingapplicationfinal.Search.Member;
 import cjkim00.imagesharingapplicationfinal.Search.SearchFragment;
-import cjkim00.imagesharingapplicationfinal.Settings.ManageFragment;
+import cjkim00.imagesharingapplicationfinal.Profile.UserProfileFragment;
 
 public class ImageViewerActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         PostFragment.OnListFragmentInteractionListener,
         SearchFragment.OnListFragmentInteractionListener,
         ProfileFragment.OnListFragmentInteractionListener,
-        ManageFragment.OnListFragmentInteractionListener {
+        ManageFragment.OnListFragmentInteractionListener,
+        ViewFollowersFragment.OnListFragmentInteractionListener,
+        ViewUserPostsFragment.OnListFragmentInteractionListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
-    public String mEmail;
+    public static String mEmail;
 
     FirebaseUser mUser;
 
@@ -160,13 +166,24 @@ public class ImageViewerActivity extends AppCompatActivity
             postFragment.setArguments(args);
             replaceFragment(postFragment);
         } else if (id == R.id.nav_profile) {
-            //replaceFragment(new ProfileFragment());
-        } else if (id == R.id.nav_view_followers) {
+            Bundle args = new Bundle();
+            args.putString("Email", mEmail);
+            UserProfileFragment userProfileFragment =  new UserProfileFragment();
+            userProfileFragment.setArguments(args);
+            replaceFragment(userProfileFragment);
+        } else if (id == R.id.nav_view_following) {
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
             ManageFragment manageFragment = new ManageFragment();
             manageFragment.setArguments(args);
             replaceFragment(manageFragment);
+        } else if (id == R.id.nav_view_followers) {
+            Bundle args = new Bundle();
+            args.putString("Email", mEmail);
+            ViewFollowersFragment viewFollowersFragment = new ViewFollowersFragment();
+            viewFollowersFragment.setArguments(args);
+            replaceFragment(viewFollowersFragment);
+
         } else if (id == R.id.nav_search) {
             replaceFragment(new SearchFragment());
         } else if (id == R.id.nav_liked_posts) {
@@ -319,6 +336,7 @@ public class ImageViewerActivity extends AppCompatActivity
 
         fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
         fragmentTransaction.commit();
+        fragmentManager.popBackStack();
     }
 
     @Override
@@ -488,6 +506,11 @@ public class ImageViewerActivity extends AppCompatActivity
 
     @Override
     public void onPointerCaptureChanged(boolean hasCapture) {
+
+    }
+
+    @Override
+    public void onListFragmentInteraction(Post post, ArrayList<Post> list) {
 
     }
 

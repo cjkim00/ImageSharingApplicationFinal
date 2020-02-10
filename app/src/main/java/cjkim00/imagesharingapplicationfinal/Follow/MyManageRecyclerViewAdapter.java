@@ -1,4 +1,4 @@
-package cjkim00.imagesharingapplicationfinal.Settings;
+package cjkim00.imagesharingapplicationfinal.Follow;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -28,7 +28,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.R;
 import cjkim00.imagesharingapplicationfinal.Search.Member;
-import cjkim00.imagesharingapplicationfinal.Settings.ManageFragment.OnListFragmentInteractionListener;
+import cjkim00.imagesharingapplicationfinal.Follow.ManageFragment.OnListFragmentInteractionListener;
 
 public class MyManageRecyclerViewAdapter extends RecyclerView.Adapter<MyManageRecyclerViewAdapter.ViewHolder> {
 

@@ -1,4 +1,4 @@
-package cjkim00.imagesharingapplicationfinal.Settings;
+package cjkim00.imagesharingapplicationfinal.Post;
 
 import android.content.Context;
 import android.net.Uri;
@@ -18,14 +18,13 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
 import cjkim00.imagesharingapplicationfinal.R;
-import cjkim00.imagesharingapplicationfinal.Search.Member;
 
 /**
  * A fragment representing a list of Items.
@@ -33,33 +32,43 @@ import cjkim00.imagesharingapplicationfinal.Search.Member;
  * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
  * interface.
  */
-public class ManageFragment extends Fragment {
+public class ViewUserPostsFragment extends Fragment {
 
+    // TODO: Customize parameter argument names
+    private static final String ARG_COLUMN_COUNT = "column-count";
     // TODO: Customize parameters
-    private int mColumnCount = 1;
+    private int mColumnCount = 4;
     private String mEmail;
-    private String mString;
+    private ArrayList<Post> mUserPosts;
     private RecyclerView mRecyclerView;
+    private MyViewUserPostsRecyclerViewAdapter mAdapter;
     private OnListFragmentInteractionListener mListener;
 
-    /**
-     * Mandatory empty constructor for the fragment manager to instantiate the
-     * fragment (e.g. upon screen orientation changes).
-     */
-    public ManageFragment() {
+    public ViewUserPostsFragment() {
     }
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Bundle args = getArguments();
-        mEmail = args.getString("Email");
+        mEmail = ImageViewerActivity.mEmail;
+        Log.i("EMAIL", "Email: " + mEmail);
+        mUserPosts = new ArrayList<>();
+        if (getArguments() != null) {
+            mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
+        }
+
+        try {
+            getPostsFromUser();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_manage_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_view_user_posts_list, container, false);
 
         // Set the adapter
         if (view instanceof RecyclerView) {
@@ -70,12 +79,8 @@ public class ManageFragment extends Fragment {
             } else {
                 mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             }
-            //recyclerView.setAdapter(new MyManageRecyclerViewAdapter(DummyContent.ITEMS, mListener));
-            try {
-                getMembers();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            mAdapter = new MyViewUserPostsRecyclerViewAdapter(mUserPosts, mListener);
+            mRecyclerView.setAdapter(mAdapter);
         }
         return view;
     }
@@ -98,8 +103,17 @@ public class ManageFragment extends Fragment {
         mListener = null;
     }
 
-    private void getMembers() throws InterruptedException {
-        List<Member> tempArray = new ArrayList<>();
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.i("TEST LOG ", "FRAGMENT RESUMES.");
+        mAdapter = new MyViewUserPostsRecyclerViewAdapter(mUserPosts, mListener);
+        mRecyclerView.setAdapter(mAdapter);
+        mAdapter.notifyDataSetChanged();
+    }
+
+
+    private void getPostsFromUser() throws InterruptedException {
         Thread thread = new Thread( new Runnable() {
             @Override
             public void run() {
@@ -109,7 +123,7 @@ public class ManageFragment extends Fragment {
                     Uri uri = new Uri.Builder()
                             .scheme("https")
                             .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_following")
+                            .appendPath("get_posts_from_user_using_email")
                             .build();
 
                     URL url = new URL(uri.toString());
@@ -130,7 +144,6 @@ public class ManageFragment extends Fragment {
                     os.close();
 
                     int status = conn.getResponseCode();
-                    Log.i("MSG", "STATUS: " + os.toString());
                     switch (status) {
                         case 200:
                         case 201:
@@ -142,8 +155,8 @@ public class ManageFragment extends Fragment {
                                 sb.append(line);
                             }
                             br.close();
-                            Log.i("MSG", sb.toString());
-                            getResults(sb.toString() , tempArray);
+                            Log.i("get posts: ", sb.toString());
+                            getResults(sb.toString());
                     }
 
                 } catch (Exception e) {
@@ -153,10 +166,9 @@ public class ManageFragment extends Fragment {
         });
         thread.start();
         thread.join();
-        mRecyclerView.setAdapter(new MyManageRecyclerViewAdapter(tempArray, mListener, mRecyclerView, mEmail));
     }
 
-    public void getResults(String result, List<Member> arr) {
+    public void getResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
@@ -164,12 +176,15 @@ public class ManageFragment extends Fragment {
                 JSONArray data = root.getJSONArray("data");
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);
-                    Member tempMember = new Member(jsonPost.getString("username")
-                            , jsonPost.getString("profiledescription")
-                            , jsonPost.getString("profileimagelocation")
-                            , jsonPost.getInt("followingtotal")
-                            , jsonPost.getInt("followerstotal"));
-                    arr.add(tempMember);
+                    Post tempPost = new Post(jsonPost.getString("postlocation")
+                            , jsonPost.getString("postdesc")
+                            , jsonPost.getInt("likes")
+                            , jsonPost.getInt("views")
+                            , jsonPost.getInt("memberid")
+                    );
+
+                    Log.i("EMAIL", "Email: " + jsonPost.getString("postlocation"));
+                    mUserPosts.add(tempPost);
 
                 }
             } else {
@@ -193,6 +208,6 @@ public class ManageFragment extends Fragment {
      */
     public interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        void onListFragmentInteraction(Member member);
+        void onListFragmentInteraction(Post post, ArrayList<Post> list);
     }
 }

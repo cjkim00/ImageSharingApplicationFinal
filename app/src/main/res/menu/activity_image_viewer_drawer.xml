@@ -13,6 +13,10 @@
 
             android:title="Profile" />
         <item
+        android:id="@+id/nav_view_following"
+
+        android:title="View Following" />
+        <item
             android:id="@+id/nav_view_followers"
 
             android:title="View Followers" />
