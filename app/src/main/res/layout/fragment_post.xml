@@ -22,9 +22,10 @@
 		android:layout_height="wrap_content"
 		android:layout_margin="@dimen/text_margin"
 		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
 		android:textAppearance="?attr/textAppearanceListItem"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@+id/imageView_postImage_postfragment" />
+		app:layout_constraintTop_toBottomOf="@+id/imageButton" />
 
 	<TextView
 		android:id="@+id/textview_likes_fragmentpost"
@@ -45,4 +46,16 @@
 		android:textAppearance="?attr/textAppearanceListItem"
 		app:layout_constraintEnd_toEndOf="parent"
 		app:layout_constraintTop_toBottomOf="@+id/imageView_postImage_postfragment" />
+
+	<ImageButton
+		android:id="@+id/imageButton"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginStart="8dp"
+		android:layout_marginTop="8dp"
+		android:background="#FFFFFF"
+		app:layout_constraintStart_toStartOf="parent"
+		app:layout_constraintTop_toBottomOf="@+id/imageView_postImage_postfragment"
+		app:srcCompat="@drawable/ic_favorite_blue_24dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

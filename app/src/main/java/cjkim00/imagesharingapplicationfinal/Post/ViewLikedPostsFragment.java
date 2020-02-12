@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -26,40 +27,31 @@ import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
 import cjkim00.imagesharingapplicationfinal.R;
 
-/**
- * A fragment representing a list of Items.
- * <p/>
- * Activities containing this fragment MUST implement the {@link OnListFragmentInteractionListener}
- * interface.
- */
-public class ViewUserPostsFragment extends Fragment {
 
-    // TODO: Customize parameter argument names
-    private static final String ARG_COLUMN_COUNT = "column-count";
+public class ViewLikedPostsFragment extends Fragment {
+
     // TODO: Customize parameters
     private int mColumnCount = 4;
     private String mEmail;
-    private ArrayList<Post> mUserPosts;
+    private ArrayList<Post> mLikedPosts;
     private RecyclerView mRecyclerView;
     private MyViewUserPostsRecyclerViewAdapter mAdapter;
     private OnListFragmentInteractionListener mListener;
 
-    public ViewUserPostsFragment() {
+    /**
+     * Mandatory empty constructor for the fragment manager to instantiate the
+     * fragment (e.g. upon screen orientation changes).
+     */
+    public ViewLikedPostsFragment() {
     }
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mEmail = ImageViewerActivity.mEmail;
-        Log.i("EMAIL", "Email: " + mEmail);
-        mUserPosts = new ArrayList<>();
-        if (getArguments() != null) {
-            mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
-        }
-
+        mLikedPosts = new ArrayList<>();
         try {
-            getPostsFromUser();
+            getLikedPosts();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -68,7 +60,7 @@ public class ViewUserPostsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_view_user_posts_list, container, false);
+        View view = inflater.inflate(R.layout.fragment_view_liked_posts_list, container, false);
 
         // Set the adapter
         if (view instanceof RecyclerView) {
@@ -79,8 +71,7 @@ public class ViewUserPostsFragment extends Fragment {
             } else {
                 mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             }
-            mAdapter = new MyViewUserPostsRecyclerViewAdapter(mUserPosts, mListener);
-            mRecyclerView.setAdapter(mAdapter);
+            mRecyclerView.setAdapter(new MyViewLikedPostsRecyclerViewAdapter(mLikedPosts, mListener));
         }
         return view;
     }
@@ -103,13 +94,8 @@ public class ViewUserPostsFragment extends Fragment {
         mListener = null;
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
 
-
-    private void getPostsFromUser() throws InterruptedException {
+    private void getLikedPosts() throws InterruptedException {
         Thread thread = new Thread( new Runnable() {
             @Override
             public void run() {
@@ -119,7 +105,7 @@ public class ViewUserPostsFragment extends Fragment {
                     Uri uri = new Uri.Builder()
                             .scheme("https")
                             .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_posts_from_user_using_email")
+                            .appendPath("get_liked_posts")
                             .build();
 
                     URL url = new URL(uri.toString());
@@ -180,7 +166,7 @@ public class ViewUserPostsFragment extends Fragment {
                     );
 
                     Log.i("EMAIL", "Email: " + jsonPost.getString("postlocation"));
-                    mUserPosts.add(tempPost);
+                    mLikedPosts.add(tempPost);
 
                 }
             } else {
@@ -204,6 +190,6 @@ public class ViewUserPostsFragment extends Fragment {
      */
     public interface OnListFragmentInteractionListener {
         // TODO: Update argument type and name
-        void onListFragmentInteraction(Post post, ArrayList<Post> list);
+        void onListFragmentInteraction(Post post, List<Post> postList);
     }
 }

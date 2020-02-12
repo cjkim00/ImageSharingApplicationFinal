@@ -54,6 +54,7 @@ import cjkim00.imagesharingapplicationfinal.Follow.ManageFragment;
 import cjkim00.imagesharingapplicationfinal.Follow.ViewFollowersFragment;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
+import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Profile.ProfileFragment;
 import cjkim00.imagesharingapplicationfinal.R;
@@ -68,11 +69,17 @@ public class ImageViewerActivity extends AppCompatActivity
         ProfileFragment.OnListFragmentInteractionListener,
         ManageFragment.OnListFragmentInteractionListener,
         ViewFollowersFragment.OnListFragmentInteractionListener,
-        ViewUserPostsFragment.OnListFragmentInteractionListener {
+        ViewUserPostsFragment.OnListFragmentInteractionListener,
+        ViewLikedPostsFragment.OnListFragmentInteractionListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
     public static String mEmail;
+    private String mProfileDescription;
+    private String mUsername;
+    private String mProfileImageLocation;
+    private int mFollowers;
+    private int mFollowing;
 
     FirebaseUser mUser;
 
@@ -153,7 +160,6 @@ public class ImageViewerActivity extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
@@ -168,6 +174,11 @@ public class ImageViewerActivity extends AppCompatActivity
         } else if (id == R.id.nav_profile) {
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
+            args.putString("Username", mUsername);
+            args.putString("Location", mProfileImageLocation);
+            args.putString("Description", mProfileDescription);
+            args.putInt("Followers", mFollowers);
+            args.putInt("Following", mFollowing);
             UserProfileFragment userProfileFragment =  new UserProfileFragment();
             userProfileFragment.setArguments(args);
             replaceFragment(userProfileFragment);
@@ -261,31 +272,30 @@ public class ImageViewerActivity extends AppCompatActivity
     }
 
     public void getResults(String result) {
-        Log.i("MSG1", "Reaches getResults method.");
         try {
-            Log.i("MSG1", "Reaches getResults method's try.");
+
+
             JSONObject root = new JSONObject(result);
             //if (root.has("success") && root.getBoolean("success") ) {
                 //JSONObject response = root.getJSONObject("success");
-                JSONArray data = root.getJSONArray("data");
-            Log.i("MSG1", "data's length: " + data.length());
+            JSONArray data = root.getJSONArray("data");
 
-                for(int i = 0; i < data.length(); i++) {
-                    JSONObject jsonObject = data.getJSONObject(0);
-                    Log.i("MSG1", "Data values: " + jsonObject.getString("username"));
-                    mUserUsername.setText(jsonObject.getString("username"));
-                    mUserFollowInfo.setText("Followers: " + jsonObject.getInt("followingtotal")
-                            + " Following: " + jsonObject.getInt("followingtotal"));
-                    getUserProfileImage(jsonObject.getString("profileimagelocation"));
-                    Log.i("MSG1", "Username: " + jsonObject.getString("Username"));
-                }
 
-            //} else {
-                Log.i("MSG1", "No response");
-            //}
+            JSONObject jsonObject = data.getJSONObject(0);
+
+            mUsername = jsonObject.getString("username");
+            mProfileDescription = jsonObject.getString("profiledescription");
+            mProfileImageLocation = jsonObject.getString("profileimagelocation");
+            mFollowers = jsonObject.getInt("followerstotal");
+            mFollowing = jsonObject.getInt("followingtotal");
+
+            mUserUsername.setText(mUsername);
+            mUserFollowInfo.setText("Followers: " + mFollowers
+                    + " Following: " + mFollowing);
+            getUserProfileImage(mProfileImageLocation);
+
         } catch (JSONException e) {
             e.printStackTrace();
-            Log.i("MSG1", e.getMessage());
         }
     }
 
@@ -336,7 +346,6 @@ public class ImageViewerActivity extends AppCompatActivity
 
         fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
         fragmentTransaction.commit();
-        fragmentManager.popBackStack();
     }
 
     @Override
@@ -488,7 +497,7 @@ public class ImageViewerActivity extends AppCompatActivity
         args.putString("Location", member.getProfileImageLocation());
         args.putInt("Followers", member.getFollowers());
         args.putInt("Following", member.getFollowing());
-
+        Log.i("MSG" , "Search fragment interaction listener");
         ProfileFragment profileFragment = new ProfileFragment();
         profileFragment.setArguments(args);
         replaceFragmentAndAddToBackStack(profileFragment);

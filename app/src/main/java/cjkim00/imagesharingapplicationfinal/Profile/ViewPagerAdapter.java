@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentStatePagerAdapter;
-import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
+import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
 
 public class ViewPagerAdapter extends FragmentStatePagerAdapter {
@@ -19,7 +19,7 @@ public class ViewPagerAdapter extends FragmentStatePagerAdapter {
             case 0:
                 return new ViewUserPostsFragment();
             case 1:
-                return new PostFragment();
+                return new ViewLikedPostsFragment();
             default:
                 return null;
 

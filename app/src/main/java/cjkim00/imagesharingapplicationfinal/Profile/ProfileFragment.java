@@ -48,14 +48,13 @@ import cjkim00.imagesharingapplicationfinal.Search.Member;
  */
 public class ProfileFragment extends Fragment {
 
-    String mCurrentUser;
-    String mUsername;
-    String mDescription;
-    String mLocation;
-    int mFollowers;
-    int mFollowing;
-    boolean mIsFollowing = false;
-    public RecyclerView mRecyclerView;
+    private String mCurrentUser;
+    private String mUsername;
+    private String mDescription;
+    private String mLocation;
+    private int mFollowers;
+    private int mFollowing;
+    private boolean mIsFollowing = false;
 
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int mColumnCount = 4;
@@ -108,7 +107,7 @@ public class ProfileFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_profile_list, container, false);
-        mRecyclerView = view.findViewById(R.id.list_profile_posts_fragment_profile_list);
+        RecyclerView mRecyclerView = view.findViewById(R.id.list_profile_posts_fragment_profile_list);
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
@@ -153,6 +152,8 @@ public class ProfileFragment extends Fragment {
             Log.i("MSGVIEW", "Grid");
         }
         mRecyclerView.setAdapter(new MyProfileRecyclerViewAdapter(mUserPosts, mListener));
+
+        Log.i("MSG" , "Profile fragment.");
         return view;
     }
 
