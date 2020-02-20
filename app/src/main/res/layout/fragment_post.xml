@@ -25,7 +25,7 @@
 		android:layout_marginTop="8dp"
 		android:textAppearance="?attr/textAppearanceListItem"
 		app:layout_constraintStart_toStartOf="parent"
-		app:layout_constraintTop_toBottomOf="@+id/imageButton" />
+		app:layout_constraintTop_toBottomOf="@+id/imageButton_like_post_fragment_post" />
 
 	<TextView
 		android:id="@+id/textview_likes_fragmentpost"
@@ -48,7 +48,7 @@
 		app:layout_constraintTop_toBottomOf="@+id/imageView_postImage_postfragment" />
 
 	<ImageButton
-		android:id="@+id/imageButton"
+		android:id="@+id/imageButton_like_post_fragment_post"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:layout_marginStart="8dp"

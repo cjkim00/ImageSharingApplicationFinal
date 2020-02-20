@@ -48,7 +48,7 @@ public class ViewLikedPostsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mEmail = ImageViewerActivity.mEmail;
+        mEmail = ImageViewerActivity.getEmail();
         mLikedPosts = new ArrayList<>();
         try {
             getLikedPosts();

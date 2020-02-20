@@ -23,6 +23,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -56,6 +57,7 @@ import cjkim00.imagesharingapplicationfinal.Post.Post;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
+import cjkim00.imagesharingapplicationfinal.Profile.EditProfileFragment;
 import cjkim00.imagesharingapplicationfinal.Profile.ProfileFragment;
 import cjkim00.imagesharingapplicationfinal.R;
 import cjkim00.imagesharingapplicationfinal.Search.Member;
@@ -70,7 +72,9 @@ public class ImageViewerActivity extends AppCompatActivity
         ManageFragment.OnListFragmentInteractionListener,
         ViewFollowersFragment.OnListFragmentInteractionListener,
         ViewUserPostsFragment.OnListFragmentInteractionListener,
-        ViewLikedPostsFragment.OnListFragmentInteractionListener {
+        ViewLikedPostsFragment.OnListFragmentInteractionListener,
+        EditProfileFragment.OnProfileUpdatedListener,
+        EditProfileFragment.OnEmailUpdatedListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
@@ -216,7 +220,6 @@ public class ImageViewerActivity extends AppCompatActivity
             public void run() {
 
                 try {
-                    HttpURLConnection urlConnection = null;
                     Uri uri = new Uri.Builder()
                             .scheme("https")
                             .appendPath("cjkim00-image-sharing-app.herokuapp.com")
@@ -253,7 +256,6 @@ public class ImageViewerActivity extends AppCompatActivity
                                 sb.append(line);
                             }
                             br.close();
-                            Log.i("MSG1", "Array in String format: " + sb.toString());
                             getResults(sb.toString());
                     }
 
@@ -288,6 +290,7 @@ public class ImageViewerActivity extends AppCompatActivity
             mProfileImageLocation = jsonObject.getString("profileimagelocation");
             mFollowers = jsonObject.getInt("followerstotal");
             mFollowing = jsonObject.getInt("followingtotal");
+            Log.i("MSG3" , mEmail + ", "  + mUsername + ", " + mProfileDescription + ", " + mProfileImageLocation + ", " + String.valueOf(mFollowers) + ", " + String.valueOf(mFollowing));
 
             mUserUsername.setText(mUsername);
             mUserFollowInfo.setText("Followers: " + mFollowers
@@ -319,7 +322,6 @@ public class ImageViewerActivity extends AppCompatActivity
     }
 
     public void replaceFragment(Fragment fragment) {
-
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
@@ -437,6 +439,11 @@ public class ImageViewerActivity extends AppCompatActivity
             }
         });
         thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -463,6 +470,10 @@ public class ImageViewerActivity extends AppCompatActivity
         if(focusedView != null) {
             inputMethodManager.hideSoftInputFromWindow(this.getCurrentFocus().getWindowToken(), 0);
         }
+    }
+
+    public static String getEmail() {
+        return mEmail;
     }
 
 
@@ -521,6 +532,31 @@ public class ImageViewerActivity extends AppCompatActivity
     @Override
     public void onListFragmentInteraction(Post post, ArrayList<Post> list) {
 
+    }
+
+    @Override
+    public void onProfileUpdated(String newUsername, String newDesctiption) {
+        mUsername = newUsername;
+        mProfileDescription = newDesctiption;
+        mUserUsername.setText(mUsername);
+    }
+
+    @Override
+    public void onEmailUpdated(String newEmail) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        Log.i("MSG4", "EMAIL: " + user.getEmail());
+        user.updateEmail(newEmail)
+                .addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        if (task.isSuccessful()) {
+                            Log.d("MSG4", "User email address updated.");
+                        }
+                    }
+                });
+
+        mUser = user;
+        mEmail = mUser.getEmail();
     }
 
     /*

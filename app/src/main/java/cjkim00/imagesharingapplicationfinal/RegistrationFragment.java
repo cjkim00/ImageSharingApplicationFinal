@@ -202,10 +202,6 @@ public class RegistrationFragment extends Fragment {
 
                     Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
                     Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
-                    //conn.connect();
-
-
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

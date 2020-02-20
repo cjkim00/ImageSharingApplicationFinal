@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -47,7 +48,15 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
         holder.mDescView.setText(mValues.get(position).getDescription());
         holder.mLikesView.setText(String.valueOf(mValues.get(position).getLikes()));
         holder.mViewsView.setText(String.valueOf(mValues.get(position).getViews()));
+        holder.mLikeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.i("MSG2", "Test log for button");
+            }
+        });
+
         getImageFromStorage(holder.mImage, mValues.get(position).getImageLocation(), holder.mItem);
+
 
         holder.mView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -91,20 +100,23 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        public final View mView;
-        public final ImageView mImage;
-        public final TextView mDescView;
-        public final TextView mLikesView;
-        public final TextView mViewsView;
-        public Post mItem;
+        final View mView;
+        final ImageView mImage;
+        final TextView mDescView;
+        final TextView mLikesView;
+        final TextView mViewsView;
+        final ImageButton mLikeButton;
 
-        public ViewHolder(View view) {
+        Post mItem;
+
+        ViewHolder(View view) {
             super(view);
             mView = view;
             mImage = view.findViewById(R.id.imageView_postImage_postfragment);
             mDescView = view.findViewById(R.id.textview_postdesc_fragmentpost);
             mLikesView = view.findViewById(R.id.textview_likes_fragmentpost);
             mViewsView = view.findViewById(R.id.textview_views_fragmentpost);
+            mLikeButton = view.findViewById(R.id.imageButton_like_post_fragment_post);
         }
 
         //@Override

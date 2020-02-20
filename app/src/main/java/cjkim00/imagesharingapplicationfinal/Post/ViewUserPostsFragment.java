@@ -51,8 +51,7 @@ public class ViewUserPostsFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mEmail = ImageViewerActivity.mEmail;
-        Log.i("EMAIL", "Email: " + mEmail);
+        mEmail = ImageViewerActivity.getEmail();
         mUserPosts = new ArrayList<>();
         if (getArguments() != null) {
             mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);

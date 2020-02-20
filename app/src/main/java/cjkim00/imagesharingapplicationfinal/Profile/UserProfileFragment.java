@@ -4,10 +4,10 @@ package cjkim00.imagesharingapplicationfinal.Profile;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -16,8 +16,12 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import java.util.Objects;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import cjkim00.imagesharingapplicationfinal.R;
 
 /**
@@ -31,6 +35,7 @@ public class UserProfileFragment extends Fragment {
     private String mLocation;
     private int mFollowers;
     private int mFollowing;
+    private Button mEditProfileButton;
     View mFragment;
 
     public UserProfileFragment() {
@@ -59,13 +64,29 @@ public class UserProfileFragment extends Fragment {
         TextView followers = view.findViewById(R.id.textView_followers_fragment_user_profile);
         TextView following = view.findViewById(R.id.textView_following_fragment_user_profile);
         ImageView profileImage = view.findViewById(R.id.imageView_profile_image_fragment_user_profile);
-        Log.i("MSG", "LOCATION : " + mLocation);
-        setProfileImage(profileImage, mLocation);
+        mEditProfileButton = view.findViewById(R.id.button_edit_profile_fragment_user_profile);
 
+        setProfileImage(profileImage, mLocation);
         username.setText(mUsername);
         description.setText(mDescription);
         followers.setText("Followers: " + mFollowers);
         following.setText("Following: " + mFollowing);
+
+        mEditProfileButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle args = new Bundle();
+                args.putString("Email", mEmail);
+                args.putString("Username", mUsername);
+                args.putString("Location", mLocation);
+                args.putString("Description", mDescription);
+
+                EditProfileFragment editProfileFragment = new EditProfileFragment();
+                editProfileFragment.setArguments(args);
+
+                replaceFragment(editProfileFragment);
+            }
+        });
 
         return view;
     }
@@ -87,6 +108,25 @@ public class UserProfileFragment extends Fragment {
                 // Handle any errors
             }
         });
+    }
+
+    public void addFragment(Fragment fragment) {
+        FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
+                .beginTransaction();
+        fragmentTransaction.add(R.id.layout_image_viewer, fragment);
+        fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+        fragmentTransaction.commit();
+    }
+
+    public void replaceFragment(Fragment fragment) {
+
+        FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
+                .beginTransaction();
+        fragmentTransaction.replace(R.id.layout_image_viewer, fragment);
+        fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+        fragmentTransaction.commit();
     }
 
 }
