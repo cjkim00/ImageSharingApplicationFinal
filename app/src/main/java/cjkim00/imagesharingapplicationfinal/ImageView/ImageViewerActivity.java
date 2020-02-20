@@ -74,7 +74,8 @@ public class ImageViewerActivity extends AppCompatActivity
         ViewUserPostsFragment.OnListFragmentInteractionListener,
         ViewLikedPostsFragment.OnListFragmentInteractionListener,
         EditProfileFragment.OnProfileUpdatedListener,
-        EditProfileFragment.OnEmailUpdatedListener {
+        EditProfileFragment.OnEmailUpdatedListener,
+        EditProfileFragment.OnFinishedWithFragmentListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
@@ -539,7 +540,37 @@ public class ImageViewerActivity extends AppCompatActivity
         mUsername = newUsername;
         mProfileDescription = newDesctiption;
         mUserUsername.setText(mUsername);
+
+        Bundle args = new Bundle();
+        args.putString("Email", mEmail);
+        args.putString("Username", mUsername);
+        args.putString("Location", mProfileImageLocation);
+        args.putString("Description", mProfileDescription);
+        args.putInt("Followers", mFollowers);
+        args.putInt("Following", mFollowing);
+
+        UserProfileFragment userProfileFragment =  new UserProfileFragment();
+        userProfileFragment.setArguments(args);
+
+        replaceFragment(userProfileFragment);
     }
+
+    @Override
+    public void onFinishedButtonPressed() {
+        Bundle args = new Bundle();
+        args.putString("Email", mEmail);
+        args.putString("Username", mUsername);
+        args.putString("Location", mProfileImageLocation);
+        args.putString("Description", mProfileDescription);
+        args.putInt("Followers", mFollowers);
+        args.putInt("Following", mFollowing);
+
+        UserProfileFragment userProfileFragment =  new UserProfileFragment();
+        userProfileFragment.setArguments(args);
+
+        replaceFragment(userProfileFragment);
+    }
+
 
     @Override
     public void onEmailUpdated(String newEmail) {
@@ -558,6 +589,7 @@ public class ImageViewerActivity extends AppCompatActivity
         mUser = user;
         mEmail = mUser.getEmail();
     }
+
 
     /*
     @Override

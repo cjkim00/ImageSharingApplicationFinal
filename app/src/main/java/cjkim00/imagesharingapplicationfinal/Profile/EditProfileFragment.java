@@ -62,8 +62,9 @@ public class EditProfileFragment extends Fragment {
     private EditText mEditDescription;
     private Button mFinishEditButton;
 
-    private OnProfileUpdatedListener mListener;
+    private OnProfileUpdatedListener mChangeListener;
     private OnEmailUpdatedListener mEmailChangedListener;
+    private OnFinishedWithFragmentListener mFinishedListener;
 
     public EditProfileFragment() {
         // Required empty public constructor
@@ -113,7 +114,9 @@ public class EditProfileFragment extends Fragment {
 //                mEmailChangedListener.onEmailUpdated(mEditEmail.getText().toString());
 //                updateEmail(mEditEmail.getText().toString());
                 if(checkForChanges()) {
-                    mListener.onProfileUpdated(mEditUsername.getText().toString(), mEditDescription.getText().toString());
+                    mChangeListener.onProfileUpdated(mEditUsername.getText().toString(), mEditDescription.getText().toString());
+                } else {
+                    mFinishedListener.onFinishedButtonPressed();
                 }
             }
         });
@@ -132,18 +135,22 @@ public class EditProfileFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         if(context instanceof OnProfileUpdatedListener) {
-            mListener = (OnProfileUpdatedListener) context;
+            mChangeListener = (OnProfileUpdatedListener) context;
         }
         if(context instanceof OnEmailUpdatedListener) {
             mEmailChangedListener = (OnEmailUpdatedListener) context;
+        }
+        if(context instanceof OnFinishedWithFragmentListener) {
+            mFinishedListener = (OnFinishedWithFragmentListener) context;
         }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
-        mListener = null;
+        mChangeListener = null;
         mEmailChangedListener = null;
+        mFinishedListener = null;
     }
 
     private void setProfileImage(ImageView imageView, String imageLocation) {
@@ -483,6 +490,10 @@ public class EditProfileFragment extends Fragment {
 
     public interface OnProfileUpdatedListener {
         void onProfileUpdated(String newUsername, String newDescription);
+    }
+
+    public interface OnFinishedWithFragmentListener {
+        void onFinishedButtonPressed();
     }
 
     public interface  OnEmailUpdatedListener {
