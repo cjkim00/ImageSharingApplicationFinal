@@ -88,6 +88,7 @@ public class PostFragment extends Fragment {
             }
             //Log.i("MSG", "RESULT: " + mPosts.get(0).getDescription());
             recyclerView.setAdapter(new MyPostRecyclerViewAdapter(mPosts, mListener));
+
         }
         return view;
     }
@@ -196,16 +197,12 @@ public class PostFragment extends Fragment {
         }
     }
 
-
-    private void onLoading() {
-        //show a loading circle
+    public void removeLoadingFragment() {
+        getActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .remove(getActivity().getSupportFragmentManager().findFragmentByTag("LOAD"))
+                .commit();
     }
-
-    private void onFinishedLoading() {
-        //remove the loading circle
-    }
-
-
 
     /**
      * This interface must be implemented by activities that contain this

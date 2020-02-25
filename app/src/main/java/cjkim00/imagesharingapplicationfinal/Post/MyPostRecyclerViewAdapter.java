@@ -2,6 +2,7 @@ package cjkim00.imagesharingapplicationfinal.Post;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,11 +16,19 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment.OnListFragmentInteractionListener;
 import cjkim00.imagesharingapplicationfinal.R;
 
@@ -27,12 +36,14 @@ import cjkim00.imagesharingapplicationfinal.R;
 public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecyclerViewAdapter.ViewHolder> {
 
     private final List<Post> mValues;
+    //private final List<Post> mLikedPosts;
     private final OnListFragmentInteractionListener mListener;
-    private Bitmap mBitmap;
 
-    public MyPostRecyclerViewAdapter(List<Post> items, OnListFragmentInteractionListener listener) {
-        mValues = (ArrayList<Post>) items;
+//    public MyPostRecyclerViewAdapter(List<Post> posts, List<Post> likedPosts, OnListFragmentInteractionListener listener) {
+public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionListener listener) {
+        mValues = (ArrayList<Post>) posts;
         mListener = listener;
+        //mLikedPosts = likedPosts;
     }
 
     @Override
@@ -87,7 +98,6 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
             public void onSuccess(byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                 imageView.setImageBitmap(bitmap);
-                mBitmap = bitmap;
                 post.setByteArray(bytes);
             }
         }).addOnFailureListener(new OnFailureListener() {
@@ -99,6 +109,109 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
 
     }
 
+//    public boolean checkIfPostIsLiked(int postID) {
+//
+//    }
+
+    public void likePost(int postID) {
+        Thread thread = new Thread( new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    HttpURLConnection urlConnection = null;
+                    Uri uri = new Uri.Builder()
+                            .scheme("https")
+                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                            .appendPath("like_post")
+                            .build();
+
+                    URL url = new URL(uri.toString());
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                    conn.setUseCaches(false);
+                    conn.setAllowUserInteraction(false);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(15000);
+                    conn.connect();
+                    JSONObject jsonParam = new JSONObject();
+                    jsonParam.put("Email", ImageViewerActivity.mEmail);
+                    jsonParam.put("PostID", postID);
+                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                    os.writeBytes(jsonParam.toString());
+                    os.flush();
+                    os.close();
+
+                    int status = conn.getResponseCode();
+                    switch (status) {
+                        case 200:
+                        case 201:
+                            BufferedReader br = new BufferedReader(
+                                    new InputStreamReader(conn.getInputStream()));
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            br.close();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
+    }
+
+    public void removeLikeFromPost(int postID) {
+        Thread thread = new Thread( new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Uri uri = new Uri.Builder()
+                            .scheme("https")
+                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                            .appendPath("remove_from_like_post")
+                            .build();
+
+                    URL url = new URL(uri.toString());
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                    conn.setUseCaches(false);
+                    conn.setAllowUserInteraction(false);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(15000);
+                    conn.connect();
+                    JSONObject jsonParam = new JSONObject();
+                    jsonParam.put("Email", ImageViewerActivity.mEmail);
+                    jsonParam.put("PostID", postID);
+                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                    os.writeBytes(jsonParam.toString());
+                    os.flush();
+                    os.close();
+
+                    int status = conn.getResponseCode();
+                    switch (status) {
+                        case 200:
+                        case 201:
+                            BufferedReader br = new BufferedReader(
+                                    new InputStreamReader(conn.getInputStream()));
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            br.close();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
+    }
+
     public class ViewHolder extends RecyclerView.ViewHolder {
         final View mView;
         final ImageView mImage;
@@ -106,6 +219,7 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
         final TextView mLikesView;
         final TextView mViewsView;
         final ImageButton mLikeButton;
+        final boolean isLiked;
 
         Post mItem;
 
@@ -117,6 +231,7 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
             mLikesView = view.findViewById(R.id.textview_likes_fragmentpost);
             mViewsView = view.findViewById(R.id.textview_views_fragmentpost);
             mLikeButton = view.findViewById(R.id.imageButton_like_post_fragment_post);
+            isLiked = false;
         }
 
         //@Override

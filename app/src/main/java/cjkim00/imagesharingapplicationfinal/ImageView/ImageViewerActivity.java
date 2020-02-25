@@ -1,5 +1,6 @@
 package cjkim00.imagesharingapplicationfinal.ImageView;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -53,6 +54,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import cjkim00.imagesharingapplicationfinal.Follow.ManageFragment;
 import cjkim00.imagesharingapplicationfinal.Follow.ViewFollowersFragment;
+import cjkim00.imagesharingapplicationfinal.LoadingFragment;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
@@ -75,7 +77,8 @@ public class ImageViewerActivity extends AppCompatActivity
         ViewLikedPostsFragment.OnListFragmentInteractionListener,
         EditProfileFragment.OnProfileUpdatedListener,
         EditProfileFragment.OnEmailUpdatedListener,
-        EditProfileFragment.OnFinishedWithFragmentListener {
+        EditProfileFragment.OnFinishedWithFragmentListener,
+        LoadingFragment.OnFragmentInteractionListener {
 
     private StorageReference mStorageRef;
     public String[] test = {"one", "two", "three", "four", "five"};
@@ -85,17 +88,25 @@ public class ImageViewerActivity extends AppCompatActivity
     private String mProfileImageLocation;
     private int mFollowers;
     private int mFollowing;
-
+    private static final int PICK_FROM_GALLERY = 2;
     FirebaseUser mUser;
 
     ImageView mUserProfileImage;
     TextView mUserUsername;
     TextView mUserFollowInfo;
 
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
+        addLoadingFragment();
 
         NavigationView navigationView = findViewById(R.id.nav_view);
         View headerView = navigationView.getHeaderView(0);
@@ -111,7 +122,12 @@ public class ImageViewerActivity extends AppCompatActivity
         fab.setOnClickListener(view -> {
             Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
             photoPickerIntent.setType("image/*");
+            photoPickerIntent.putExtra("crop", "true");
+            photoPickerIntent.putExtra("aspectX", 0);
+            photoPickerIntent.putExtra("aspectY", 0);
             startActivityForResult(photoPickerIntent, 1);
+
+
         });
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -128,6 +144,7 @@ public class ImageViewerActivity extends AppCompatActivity
         mEmail = mUser.getEmail();
         Log.i("MSG1", "Email: " + mUser.getEmail() + ", " + mEmail);
         setUserInfo();
+
         PostFragment postFragment = new PostFragment();
         Bundle args = new Bundle();
         args.putString("Email", mEmail);
@@ -158,10 +175,7 @@ public class ImageViewerActivity extends AppCompatActivity
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
         //noinspection SimplifiableIfStatement
-
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -206,8 +220,9 @@ public class ImageViewerActivity extends AppCompatActivity
 
         } else if (id == R.id.nav_settings) {
             //replaceFragment(new SettingsFragment());
+            replaceFragment(new LoadingFragment());
         } else if (id == R.id.nav_log_out) {
-
+            addLoadingFragment();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -259,7 +274,6 @@ public class ImageViewerActivity extends AppCompatActivity
                             br.close();
                             getResults(sb.toString());
                     }
-
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -271,19 +285,12 @@ public class ImageViewerActivity extends AppCompatActivity
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
     public void getResults(String result) {
         try {
-
-
             JSONObject root = new JSONObject(result);
-            //if (root.has("success") && root.getBoolean("success") ) {
-                //JSONObject response = root.getJSONObject("success");
             JSONArray data = root.getJSONArray("data");
-
-
             JSONObject jsonObject = data.getJSONObject(0);
 
             mUsername = jsonObject.getString("username");
@@ -291,13 +298,13 @@ public class ImageViewerActivity extends AppCompatActivity
             mProfileImageLocation = jsonObject.getString("profileimagelocation");
             mFollowers = jsonObject.getInt("followerstotal");
             mFollowing = jsonObject.getInt("followingtotal");
-            Log.i("MSG3" , mEmail + ", "  + mUsername + ", " + mProfileDescription + ", " + mProfileImageLocation + ", " + String.valueOf(mFollowers) + ", " + String.valueOf(mFollowing));
+            Log.i("MSG3" , mEmail + ", "  + mUsername + ", " + mProfileDescription + ", "
+                    + mProfileImageLocation + ", " + String.valueOf(mFollowers)
+                    + ", " + String.valueOf(mFollowing));
 
             mUserUsername.setText(mUsername);
-            mUserFollowInfo.setText("Followers: " + mFollowers
-                    + " Following: " + mFollowing);
+            mUserFollowInfo.setText("Followers: " + mFollowers + " Following: " + mFollowing);
             getUserProfileImage(mProfileImageLocation);
-
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -352,6 +359,22 @@ public class ImageViewerActivity extends AppCompatActivity
     }
 
     @Override
+    public void addLoadingFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.layout_image_viewer, new LoadingFragment(), "LOAD")
+                .addToBackStack(null)
+                .commit();
+    }
+    @Override
+    public void removeLoadingFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .remove(getSupportFragmentManager().findFragmentByTag("LOAD"))
+                .commit();
+    }
+
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
@@ -361,16 +384,12 @@ public class ImageViewerActivity extends AppCompatActivity
         if (resultCode == RESULT_OK) {
             final Uri imageUri = data.getData();
             StorageReference riversRef = mStorageRef.child(getRealPathFromURI(imageUri));
-
-
             riversRef.putFile(imageUri)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                             Toast.makeText(getApplicationContext()
                                     ,getRealPathFromURI(imageUri),Toast.LENGTH_SHORT).show();
-                            //downloadFileTest(getRealPathFromURI(imageUri));
-
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -378,19 +397,13 @@ public class ImageViewerActivity extends AppCompatActivity
                         public void onFailure(@NonNull Exception exception) {
                             Toast.makeText(getApplicationContext()
                                     ,"Image not uploaded",Toast.LENGTH_SHORT).show();
-
-                            // Handle unsuccessful uploads
-                            // ...
                         }
                     }).addOnCompleteListener(this, new OnCompleteListener<UploadTask.TaskSnapshot>() {
                 @Override
                 public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                    //downloadFileTest(getRealPathFromURI(imageUri));
                     uploadToDatabase(getRealPathFromURI(imageUri));
-
                 }
             });
-
         }
     }
 
