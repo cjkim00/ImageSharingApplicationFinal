@@ -106,7 +106,7 @@ public class ImageViewerActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
-        addLoadingFragment();
+        //addLoadingFragment();
 
         NavigationView navigationView = findViewById(R.id.nav_view);
         View headerView = navigationView.getHeaderView(0);
@@ -220,9 +220,9 @@ public class ImageViewerActivity extends AppCompatActivity
 
         } else if (id == R.id.nav_settings) {
             //replaceFragment(new SettingsFragment());
-            replaceFragment(new LoadingFragment());
+            //replaceFragment(new LoadingFragment());
         } else if (id == R.id.nav_log_out) {
-            addLoadingFragment();
+            //addLoadingFragment();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

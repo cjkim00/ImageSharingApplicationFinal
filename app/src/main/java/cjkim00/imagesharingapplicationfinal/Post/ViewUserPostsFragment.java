@@ -78,6 +78,7 @@ public class ViewUserPostsFragment extends Fragment {
             } else {
                 mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             }
+
             mAdapter = new MyViewUserPostsRecyclerViewAdapter(mUserPosts, mListener);
             mRecyclerView.setAdapter(mAdapter);
         }
@@ -166,19 +167,24 @@ public class ViewUserPostsFragment extends Fragment {
     public void getResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
+            Log.i("MSG6", root.toString());
+            Log.i("MSG6", "BOOL: " + root.has("success") + ", " + root.getBoolean("success"));
             if (root.has("success") && root.getBoolean("success") ) {
                 //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
+                Log.i("MSG6", "DATA: " + data.toString());
+                Log.i("MSG6", "DATA: " + data.length());
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);
                     Post tempPost = new Post(jsonPost.getString("postlocation")
                             , jsonPost.getString("postdesc")
                             , jsonPost.getInt("likes")
                             , jsonPost.getInt("views")
+                            , jsonPost.getInt("postid")
                             , jsonPost.getInt("memberid")
                     );
 
-                    Log.i("EMAIL", "Email: " + jsonPost.getString("postlocation"));
+                    Log.i("MSG6", "POST: ");
                     mUserPosts.add(tempPost);
 
                 }

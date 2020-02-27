@@ -92,6 +92,8 @@ public class ProfileFragment extends Fragment {
 
         mUserPosts = new ArrayList<>();
 
+        Log.i("MSG6", "PROFILE FRAGMENT USERNAME: " + mUsername);
+
         try {
             getPostsFromUser(mUsername);
         } catch (InterruptedException e) {
@@ -409,7 +411,7 @@ public class ProfileFragment extends Fragment {
                                 sb.append(line);
                             }
                             br.close();
-                            Log.i("get posts: ", sb.toString());
+                            Log.i("MSG6", "PROFILE FRAGMENT: " +sb.toString());
                             getResults(sb.toString());
                     }
 
@@ -426,7 +428,6 @@ public class ProfileFragment extends Fragment {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
-                //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);
@@ -434,10 +435,10 @@ public class ProfileFragment extends Fragment {
                             , jsonPost.getString("postdesc")
                             , jsonPost.getInt("likes")
                             , jsonPost.getInt("views")
+                            , jsonPost.getInt("postid")
                             , jsonPost.getInt("memberid")
                     );
                     mUserPosts.add(tempPost);
-
                 }
             } else {
                 Log.i("MSG", "No response");

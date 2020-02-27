@@ -10,14 +10,16 @@ public class Post implements Serializable {
     private int mLikes;
     private int mViews;
     private int mPostID;
+    private int mMemberID;
 
-    public Post(String imageLocation, String desc, int likes, int views, int postID) {
+    public Post(String imageLocation, String desc, int likes, int views, int postID, int memberID) {
         //mBitmap = image;
         mImageLocation = imageLocation;
         mDesc = desc;
         mLikes = likes;
         mViews = views;
         mPostID = postID;
+        mMemberID = memberID;
     }
 
 
@@ -42,4 +44,6 @@ public class Post implements Serializable {
     }
 
     public int getPostID() { return mPostID; }
+
+    public int getMemberID() { return mMemberID; }
 }

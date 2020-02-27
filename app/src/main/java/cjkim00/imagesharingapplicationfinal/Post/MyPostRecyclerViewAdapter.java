@@ -35,15 +35,21 @@ import cjkim00.imagesharingapplicationfinal.R;
 
 public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecyclerViewAdapter.ViewHolder> {
 
-    private final List<Post> mValues;
-    //private final List<Post> mLikedPosts;
+    private final List<Post> mPosts;
+    private final List<Post> mLikedPosts;
+    private List<Integer> mPostIDs;
+    private List<Integer> mLikedPostIDs;
+
     private final OnListFragmentInteractionListener mListener;
 
-//    public MyPostRecyclerViewAdapter(List<Post> posts, List<Post> likedPosts, OnListFragmentInteractionListener listener) {
-public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionListener listener) {
-        mValues = (ArrayList<Post>) posts;
+    public MyPostRecyclerViewAdapter(List<Post> posts, List<Post> likedPosts, OnListFragmentInteractionListener listener) {
+        //public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionListener listener) {
+        mPosts = (ArrayList<Post>) posts;
         mListener = listener;
-        //mLikedPosts = likedPosts;
+        mLikedPosts = likedPosts;
+        mPostIDs = new ArrayList<>();
+        mLikedPostIDs = new ArrayList<>();
+        convertPostListToIDList();
     }
 
     @Override
@@ -55,18 +61,36 @@ public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionList
 
     @Override
     public void onBindViewHolder(final ViewHolder holder, int position) {
-        holder.mItem = mValues.get(position);
-        holder.mDescView.setText(mValues.get(position).getDescription());
-        holder.mLikesView.setText(String.valueOf(mValues.get(position).getLikes()));
-        holder.mViewsView.setText(String.valueOf(mValues.get(position).getViews()));
+        holder.mPost = mPosts.get(position);
+        holder.mDescView.setText(mPosts.get(position).getDescription());
+        holder.mLikesView.setText(String.valueOf(mPosts.get(position).getLikes()));
+        holder.mViewsView.setText(String.valueOf(mPosts.get(position).getViews()));
+
+        if(checkIfPostIsLiked(holder.mPost.getPostID())) {
+            holder.mLikeButton.setImageResource(R.drawable.ic_favorite_red_24dp);
+            holder.isLiked = true;
+        } else {
+            holder.mLikeButton.setImageResource(R.drawable.ic_favorite_blue_24dp);
+            holder.isLiked = false;
+        }
         holder.mLikeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.i("MSG2", "Test log for button");
+                if(holder.isLiked) {
+                    removeLikeFromPost(holder.mPost.getPostID());
+                    holder.isLiked = false;
+                    holder.mLikeButton.setImageResource(R.drawable.ic_favorite_blue_24dp);
+                    Log.i("LIKE", "Removed Like");
+                } else {
+                    likePost(holder.mPost.getPostID());
+                    holder.isLiked = true;
+                    holder.mLikeButton.setImageResource(R.drawable.ic_favorite_red_24dp);
+                    Log.i("LIKE", "Added Like");
+                }
             }
         });
 
-        getImageFromStorage(holder.mImage, mValues.get(position).getImageLocation(), holder.mItem);
+        getImageFromStorage(holder.mImage, mPosts.get(position).getImageLocation(), holder.mPost);
 
 
         holder.mView.setOnClickListener(new View.OnClickListener() {
@@ -75,7 +99,7 @@ public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionList
                 if (null != mListener) {
                     // Notify the active callbacks interface (the activity, if the
                     // fragment is attached to one) that an item has been selected.
-                    mListener.onListFragmentInteraction(holder.mItem);
+                    mListener.onListFragmentInteraction(holder.mPost);
                 }
             }
         });
@@ -83,8 +107,8 @@ public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionList
 
     @Override
     public int getItemCount() {
-        Log.i("MSG", "Size: " + mValues.size());
-        return mValues.size();
+        Log.i("MSG", "Size: " + mPosts.size());
+        return mPosts.size();
 
     }
 
@@ -109,9 +133,21 @@ public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionList
 
     }
 
-//    public boolean checkIfPostIsLiked(int postID) {
-//
-//    }
+    public void convertPostListToIDList() {
+        for(int i = 0; i < mPosts.size(); i++) {
+            mPostIDs.add(mPosts.get(i).getPostID());
+
+        }
+        //Log.i("MSGID", String.valueOf(mLikedPostIDs.size()) + ", ");
+        for(int i = 0; i < mLikedPosts.size(); i++) {
+            mLikedPostIDs.add(mLikedPosts.get(i).getPostID());
+            Log.i("MSGID", String.valueOf(mLikedPostIDs.get(i)) + ", ");
+        }
+    }
+
+    public boolean checkIfPostIsLiked(int postID) {
+        return mLikedPostIDs.contains(postID);
+    }
 
     public void likePost(int postID) {
         Thread thread = new Thread( new Runnable() {
@@ -219,9 +255,10 @@ public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionList
         final TextView mLikesView;
         final TextView mViewsView;
         final ImageButton mLikeButton;
-        final boolean isLiked;
+        private boolean isLiked;
+        private int postID;
 
-        Post mItem;
+        Post mPost;
 
         ViewHolder(View view) {
             super(view);

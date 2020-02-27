@@ -101,7 +101,6 @@ public class ViewLikedPostsFragment extends Fragment {
             public void run() {
 
                 try {
-                    HttpURLConnection urlConnection = null;
                     Uri uri = new Uri.Builder()
                             .scheme("https")
                             .appendPath("cjkim00-image-sharing-app.herokuapp.com")
@@ -162,6 +161,7 @@ public class ViewLikedPostsFragment extends Fragment {
                             , jsonPost.getString("postdesc")
                             , jsonPost.getInt("likes")
                             , jsonPost.getInt("views")
+                            , jsonPost.getInt("postid")
                             , jsonPost.getInt("memberid")
                     );
 

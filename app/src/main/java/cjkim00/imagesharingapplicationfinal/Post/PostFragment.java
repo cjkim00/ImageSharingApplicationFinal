@@ -42,6 +42,7 @@ public class PostFragment extends Fragment {
     private String mEmail;
     private OnListFragmentInteractionListener mListener;
     private List<Post> mPosts;
+    private List<Post> mLikedPosts;
     public static final String ARG_POST_LIST = "posts";
     public static final String ARG_EMAIL = "email";
     //public String mEmail;
@@ -57,13 +58,9 @@ public class PostFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mPosts = new ArrayList<Post>();
+        mLikedPosts = new ArrayList<Post>();
         Bundle args = getArguments();
-
-        //mEmail = Objects.requireNonNull(args).getString("Email");
         mEmail = ImageViewerActivity.mEmail;
-
-        //mEmail = getArguments().getString(ARG_EMAIL);
-        //Toast.makeText(getContext(),"Email: " + mEmail ,Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -82,12 +79,13 @@ public class PostFragment extends Fragment {
             }
             try {
                 getPosts();
+                getLikedPosts();
                 //getImageFromStorage();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             //Log.i("MSG", "RESULT: " + mPosts.get(0).getDescription());
-            recyclerView.setAdapter(new MyPostRecyclerViewAdapter(mPosts, mListener));
+            recyclerView.setAdapter(new MyPostRecyclerViewAdapter(mPosts, mLikedPosts, mListener));
 
         }
         return view;
@@ -172,6 +170,89 @@ public class PostFragment extends Fragment {
         mPosts = tempArray;
     }
 
+    private void getLikedPosts() throws InterruptedException {
+        Thread thread = new Thread( new Runnable() {
+            @Override
+            public void run() {
+
+                try {
+                    Uri uri = new Uri.Builder()
+                            .scheme("https")
+                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                            .appendPath("get_liked_posts")
+                            .build();
+
+                    URL url = new URL(uri.toString());
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                    conn.setUseCaches(false);
+                    conn.setAllowUserInteraction(false);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(15000);
+                    conn.connect();
+
+                    JSONObject jsonParam = new JSONObject();
+                    jsonParam.put("User", mEmail);
+                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                    os.writeBytes(jsonParam.toString());
+                    os.flush();
+                    os.close();
+
+                    int status = conn.getResponseCode();
+                    switch (status) {
+                        case 200:
+                        case 201:
+                            BufferedReader br = new BufferedReader(
+                                    new InputStreamReader(conn.getInputStream()));
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            br.close();
+                            Log.i("get posts: ", sb.toString());
+                            getLikedPostsResults(sb.toString());
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
+        thread.join();
+    }
+
+    public void getLikedPostsResults(String result) {
+        try {
+            JSONObject root = new JSONObject(result);
+            if (root.has("success") && root.getBoolean("success") ) {
+                //JSONObject response = root.getJSONObject("success");
+                JSONArray data = root.getJSONArray("data");
+                for(int i = 0; i < data.length(); i++) {
+                    JSONObject jsonPost = data.getJSONObject(i);
+                    Post tempPost = new Post(jsonPost.getString("postlocation")
+                            , jsonPost.getString("postdesc")
+                            , jsonPost.getInt("likes")
+                            , jsonPost.getInt("views")
+                            , jsonPost.getInt("postid")
+                            , jsonPost.getInt("memberid")
+                    );
+
+                    Log.i("EMAIL", "Email: " + jsonPost.getString("postlocation"));
+                    mLikedPosts.add(tempPost);
+
+                }
+            } else {
+                Log.i("MSG", "No response");
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+            Log.i("MSG", e.getMessage());
+        }
+    }
+
     public void getResults(String result, List<Post> arr) {
         try {
             JSONObject root = new JSONObject(result);
@@ -185,7 +266,9 @@ public class PostFragment extends Fragment {
                             , jsonPost.getString("postdesc")
                             , jsonPost.getInt("likes")
                             , jsonPost.getInt("views")
-                            , jsonPost.getInt("postid"));
+                            , jsonPost.getInt("postid")
+                            , jsonPost.getInt("memberid")
+                    );
                     arr.add(tempPost);
                 }
             } else {
