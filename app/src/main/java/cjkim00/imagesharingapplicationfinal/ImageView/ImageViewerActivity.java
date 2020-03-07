@@ -35,7 +35,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -57,6 +59,7 @@ import cjkim00.imagesharingapplicationfinal.Follow.ViewFollowersFragment;
 import cjkim00.imagesharingapplicationfinal.LoadingFragment;
 import cjkim00.imagesharingapplicationfinal.Post.Post;
 import cjkim00.imagesharingapplicationfinal.Post.PostFragment;
+import cjkim00.imagesharingapplicationfinal.Post.UploadPostFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Profile.EditProfileFragment;
@@ -95,6 +98,8 @@ public class ImageViewerActivity extends AppCompatActivity
     TextView mUserUsername;
     TextView mUserFollowInfo;
 
+    FloatingActionButton mFab;
+
 
     @Override
     protected void onStart() {
@@ -118,8 +123,10 @@ public class ImageViewerActivity extends AppCompatActivity
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(view -> {
+        mFab = findViewById(R.id.fab);
+        mFab.setImageResource(R.drawable.ic_add_white_24dp);
+        mFab.setOnClickListener(view -> {
+            mFab.setVisibility(View.GONE);
             Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
             photoPickerIntent.setType("image/*");
             photoPickerIntent.putExtra("crop", "true");
@@ -185,12 +192,14 @@ public class ImageViewerActivity extends AppCompatActivity
         int id = item.getItemId();
 
         if (id == R.id.nav_home) {
+            mFab.setVisibility(View.VISIBLE);
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
             PostFragment postFragment = new PostFragment();
             postFragment.setArguments(args);
             replaceFragment(postFragment);
         } else if (id == R.id.nav_profile) {
+            mFab.setVisibility(View.GONE);
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
             args.putString("Username", mUsername);
@@ -202,12 +211,14 @@ public class ImageViewerActivity extends AppCompatActivity
             userProfileFragment.setArguments(args);
             replaceFragment(userProfileFragment);
         } else if (id == R.id.nav_view_following) {
+            mFab.setVisibility(View.GONE);
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
             ManageFragment manageFragment = new ManageFragment();
             manageFragment.setArguments(args);
             replaceFragment(manageFragment);
         } else if (id == R.id.nav_view_followers) {
+            mFab.setVisibility(View.GONE);
             Bundle args = new Bundle();
             args.putString("Email", mEmail);
             ViewFollowersFragment viewFollowersFragment = new ViewFollowersFragment();
@@ -215,6 +226,7 @@ public class ImageViewerActivity extends AppCompatActivity
             replaceFragment(viewFollowersFragment);
 
         } else if (id == R.id.nav_search) {
+            mFab.setVisibility(View.GONE);
             replaceFragment(new SearchFragment());
         } else if (id == R.id.nav_liked_posts) {
 
@@ -379,88 +391,119 @@ public class ImageViewerActivity extends AppCompatActivity
         super.onActivityResult(requestCode, resultCode, data);
 
         mStorageRef = FirebaseStorage.getInstance().getReference();
-        //Toast.makeText(getApplicationContext(),"Image uploaded",Toast.LENGTH_SHORT).show();
-
         if (resultCode == RESULT_OK) {
             final Uri imageUri = data.getData();
             StorageReference riversRef = mStorageRef.child(getRealPathFromURI(imageUri));
-            riversRef.putFile(imageUri)
-                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                        @Override
-                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                            Toast.makeText(getApplicationContext()
-                                    ,getRealPathFromURI(imageUri),Toast.LENGTH_SHORT).show();
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception exception) {
-                            Toast.makeText(getApplicationContext()
-                                    ,"Image not uploaded",Toast.LENGTH_SHORT).show();
-                        }
-                    }).addOnCompleteListener(this, new OnCompleteListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-                    uploadToDatabase(getRealPathFromURI(imageUri));
-                }
-            });
-        }
-    }
+            //mUserProfileImage.setImageURI(imageUri);
+            try {
+                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                byte[] byteArray = stream.toByteArray();
+                bitmap.recycle();
 
-    public void uploadToDatabase(String location) {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+                Bundle args = new Bundle();
+                args.putByteArray("Image", byteArray);
+                args.putString("Email", mEmail);
+                args.putString("Username", mUsername);
+                args.putString("Location", getRealPathFromURI(imageUri));
+                args.putString("Description", mProfileDescription);
+                args.putInt("Followers", mFollowers);
+                args.putInt("Following", mFollowing);
+                args.putString("Uri", imageUri.toString());
+                Log.i("MSG7", "ORIGINAL: " + imageUri.toString());
+                UploadPostFragment uploadPostFragment = new UploadPostFragment();
+                uploadPostFragment.setArguments(args);
+                uploadPostFragment.setArguments(args);
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("InsertPost")
-                            .build();
+                addFragment(uploadPostFragment);
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                    conn.setRequestProperty("Accept","application/json");
-                    conn.setDoOutput(true);
-                    conn.setDoInput(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("PostLocation", location);
-                    jsonParam.put("Email", mEmail);
-                    jsonParam.put("Description", "Temporary Value");
-                    jsonParam.put("Likes", 1);
-                    jsonParam.put("Views", 1);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
-
-                    Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
-                    Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
-                    //conn.connect();
-
-
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        });
-        thread.start();
-        try {
-            thread.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+
+
+
+            //addFragment();
+
+
+//            riversRef.putFile(imageUri)
+//                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+//                        @Override
+//                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+//                            Toast.makeText(getApplicationContext()
+//                                    ,getRealPathFromURI(imageUri),Toast.LENGTH_SHORT).show();
+//                        }
+//                    })
+//                    .addOnFailureListener(new OnFailureListener() {
+//                        @Override
+//                        public void onFailure(@NonNull Exception exception) {
+//                            Toast.makeText(getApplicationContext()
+//                                    ,"Image not uploaded",Toast.LENGTH_SHORT).show();
+//                        }
+//                    }).addOnCompleteListener(this, new OnCompleteListener<UploadTask.TaskSnapshot>() {
+//                @Override
+//                public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
+//                    uploadToDatabase(getRealPathFromURI(imageUri));
+//                }
+//            });
         }
     }
 
-
+//    public void uploadToDatabase(String location) {
+//        Thread thread = new Thread( new Runnable() {
+//            @Override
+//            public void run() {
+//
+//                try {
+//                    HttpURLConnection urlConnection = null;
+//                    Uri uri = new Uri.Builder()
+//                            .scheme("https")
+//                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+//                            .appendPath("InsertPost")
+//                            .build();
+//
+//                    URL url = new URL(uri.toString());
+//                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//                    conn.setRequestMethod("POST");
+//                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+//                    conn.setRequestProperty("Accept","application/json");
+//                    conn.setDoOutput(true);
+//                    conn.setDoInput(true);
+//                    conn.setConnectTimeout(15000);
+//                    conn.setReadTimeout(15000);
+//
+//                    JSONObject jsonParam = new JSONObject();
+//                    jsonParam.put("PostLocation", location);
+//                    jsonParam.put("Email", mEmail);
+//                    jsonParam.put("Description", "Temporary Value");
+//                    jsonParam.put("Likes", 1);
+//                    jsonParam.put("Views", 1);
+//                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+//                    os.writeBytes(jsonParam.toString());
+//                    os.flush();
+//                    os.close();
+//
+//                    Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
+//                    Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
+//                    //conn.connect();
+//
+//
+//
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
+//        thread.start();
+//        try {
+//            thread.join();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//
     private String getRealPathFromURI(Uri contentURI) {
         String result;
         Cursor cursor = getContentResolver()
