@@ -1,8 +1,7 @@
 package cjkim00.imagesharingapplicationfinal.Search;
 
 public class Member {
-
-    private String mEmail;
+    
     private String mUsername;
     private String mDescription;
     private String mProfileImageLocation;
@@ -17,9 +16,7 @@ public class Member {
         mFollowing = following;
     }
 
-    public String getEmail() {
-        return mEmail;
-    }
+
 
     public String getUsername() {
         return mUsername;

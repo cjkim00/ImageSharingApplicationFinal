@@ -10,7 +10,6 @@ public class Post implements Serializable {
     private int mLikes;
     private int mViews;
     private int mPostID;
-    private int mMemberID;
 
     public Post(String imageLocation, String desc, int likes, int views, int postID, int memberID) {
         //mBitmap = image;
@@ -19,11 +18,10 @@ public class Post implements Serializable {
         mLikes = likes;
         mViews = views;
         mPostID = postID;
-        mMemberID = memberID;
     }
 
 
-    public void setByteArray(byte[] byteArray) {
+    void setByteArray(byte[] byteArray) {
         mByteArray = byteArray;
     }
 
@@ -45,5 +43,4 @@ public class Post implements Serializable {
 
     public int getPostID() { return mPostID; }
 
-    public int getMemberID() { return mMemberID; }
 }

@@ -9,6 +9,8 @@ import android.view.ViewGroup;
 
 import com.google.android.material.tabs.TabLayout;
 
+import java.util.Objects;
+
 import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.ViewPager;
 import cjkim00.imagesharingapplicationfinal.R;
@@ -40,7 +42,7 @@ public class TabFragment extends Fragment {
         TabLayout tabLayout = view.findViewById(R.id.tabLayout_profile_tabs_fragment_tab);
 
         ViewPager viewPager = view.findViewById(R.id.viewPager_fragment_tab);
-        ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getActivity().getSupportFragmentManager(), BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+        ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(Objects.requireNonNull(getActivity()).getSupportFragmentManager(), BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
 
         viewPager.setAdapter(viewPagerAdapter);
 

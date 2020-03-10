@@ -20,9 +20,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
 import cjkim00.imagesharingapplicationfinal.R;
@@ -30,12 +30,8 @@ import cjkim00.imagesharingapplicationfinal.R;
 
 public class ViewLikedPostsFragment extends Fragment {
 
-    // TODO: Customize parameters
-    private int mColumnCount = 4;
     private String mEmail;
     private ArrayList<Post> mLikedPosts;
-    private RecyclerView mRecyclerView;
-    private MyViewUserPostsRecyclerViewAdapter mAdapter;
     private OnListFragmentInteractionListener mListener;
 
     /**
@@ -65,12 +61,10 @@ public class ViewLikedPostsFragment extends Fragment {
         // Set the adapter
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
-            mRecyclerView = (RecyclerView) view;
-            if (mColumnCount <= 1) {
-                mRecyclerView.setLayoutManager(new LinearLayoutManager(context));
-            } else {
-                mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
-            }
+            RecyclerView mRecyclerView = (RecyclerView) view;
+            // TODO: Customize parameters
+            int mColumnCount = 4;
+            mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
             mRecyclerView.setAdapter(new MyViewLikedPostsRecyclerViewAdapter(mLikedPosts, mListener));
         }
         return view;
@@ -78,7 +72,7 @@ public class ViewLikedPostsFragment extends Fragment {
 
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof OnListFragmentInteractionListener) {
             mListener = (OnListFragmentInteractionListener) context;
@@ -96,64 +90,60 @@ public class ViewLikedPostsFragment extends Fragment {
 
 
     private void getLikedPosts() throws InterruptedException {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_liked_posts")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("get_liked_posts")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("get posts: ", sb.toString());
-                            getResults(sb.toString());
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("get posts: ", sb.toString());
+                        getResults(sb.toString());
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
         thread.join();
     }
 
-    public void getResults(String result) {
+    private void getResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
-                //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);

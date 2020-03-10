@@ -35,7 +35,6 @@ public class UserProfileFragment extends Fragment {
     private String mLocation;
     private int mFollowers;
     private int mFollowing;
-    private Button mEditProfileButton;
     View mFragment;
 
     public UserProfileFragment() {
@@ -46,7 +45,7 @@ public class UserProfileFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Bundle args = getArguments();
-        mEmail = args.getString("Email");
+        mEmail = Objects.requireNonNull(args).getString("Email");
         mUsername = args.getString("Username");
         mDescription = args.getString("Description");
         mLocation = args.getString("Location");
@@ -64,7 +63,7 @@ public class UserProfileFragment extends Fragment {
         TextView followers = view.findViewById(R.id.textView_followers_fragment_user_profile);
         TextView following = view.findViewById(R.id.textView_following_fragment_user_profile);
         ImageView profileImage = view.findViewById(R.id.imageView_profile_image_fragment_user_profile);
-        mEditProfileButton = view.findViewById(R.id.button_edit_profile_fragment_user_profile);
+        Button mEditProfileButton = view.findViewById(R.id.button_edit_profile_fragment_user_profile);
 
         setProfileImage(profileImage, mLocation);
         username.setText(mUsername);
@@ -95,33 +94,20 @@ public class UserProfileFragment extends Fragment {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(imageLocation);
 
-        final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                imageView.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                // Handle any errors
-            }
+        //final long ONE_MEGABYTE = 1024 * 1024;
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            imageView.setImageBitmap(bitmap);
+        }).addOnFailureListener(exception -> {
+            // Handle any errors
         });
     }
 
-    public void addFragment(Fragment fragment) {
-        FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
-                .beginTransaction();
-        fragmentTransaction.add(R.id.layout_image_viewer, fragment);
-        fragmentTransaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
-        fragmentTransaction.commit();
-    }
 
-    public void replaceFragment(Fragment fragment) {
+    private void replaceFragment(Fragment fragment) {
 
-        FragmentManager fragmentManager = getActivity().getSupportFragmentManager();
+        FragmentManager fragmentManager = Objects.requireNonNull(getActivity()).getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
         fragmentTransaction.replace(R.id.layout_image_viewer, fragment);

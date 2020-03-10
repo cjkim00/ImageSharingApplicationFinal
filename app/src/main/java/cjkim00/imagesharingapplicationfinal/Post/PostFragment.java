@@ -21,8 +21,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
@@ -35,18 +35,11 @@ import cjkim00.imagesharingapplicationfinal.R;
  * interface.
  */
 public class PostFragment extends Fragment {
-    // TODO: Customize parameter argument names
-    private static final String ARG_COLUMN_COUNT = "column-count";
-    // TODO: Customize parameters
-    private int mColumnCount = 1;
     private String mEmail;
     private OnListFragmentInteractionListener mListener;
     private List<Post> mPosts;
     private List<Post> mLikedPosts;
-    public static final String ARG_POST_LIST = "posts";
-    public static final String ARG_EMAIL = "email";
-    //public String mEmail;
-    RecyclerView recyclerView;
+
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -57,9 +50,8 @@ public class PostFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mPosts = new ArrayList<Post>();
-        mLikedPosts = new ArrayList<Post>();
-        Bundle args = getArguments();
+        mPosts = new ArrayList<>();
+        mLikedPosts = new ArrayList<>();
         mEmail = ImageViewerActivity.mEmail;
     }
 
@@ -67,24 +59,17 @@ public class PostFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_post_list, container, false);
-
-        // Set the adapter
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
-            recyclerView = (RecyclerView) view;
-            if (mColumnCount <= 1) {
-                recyclerView.setLayoutManager(new LinearLayoutManager(context));
-            } else {
-                recyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
-            }
+            RecyclerView recyclerView = (RecyclerView) view;
+            // TODO: Customize parameters
+            recyclerView.setLayoutManager(new LinearLayoutManager(context));
             try {
                 getPosts();
                 getLikedPosts();
-                //getImageFromStorage();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            //Log.i("MSG", "RESULT: " + mPosts.get(0).getDescription());
             recyclerView.setAdapter(new MyPostRecyclerViewAdapter(mPosts, mLikedPosts, mListener));
 
         }
@@ -93,7 +78,7 @@ public class PostFragment extends Fragment {
 
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof OnListFragmentInteractionListener) {
             mListener = (OnListFragmentInteractionListener) context;
@@ -111,58 +96,54 @@ public class PostFragment extends Fragment {
 
     private void getPosts() throws InterruptedException {
         List<Post> tempArray = new ArrayList<>();
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    Log.i("MSG", "START");
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("GetAllPosts")
-                            .build();
+            try {
+                Log.i("MSG", "START");
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("GetAllPosts")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    Log.i("MSG", "" + status);
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("MSG", sb.toString());
+                int status = conn.getResponseCode();
+                Log.i("MSG", "" + status);
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("MSG", sb.toString());
 
-                            getResults(sb.toString() , tempArray);
+                        getResults(sb.toString() , tempArray);
 
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -171,64 +152,60 @@ public class PostFragment extends Fragment {
     }
 
     private void getLikedPosts() throws InterruptedException {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_liked_posts")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("get_liked_posts")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("get posts: ", sb.toString());
-                            getLikedPostsResults(sb.toString());
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("get posts: ", sb.toString());
+                        getLikedPostsResults(sb.toString());
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
         thread.join();
     }
 
-    public void getLikedPostsResults(String result) {
+    private void getLikedPostsResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
-                //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);
@@ -253,13 +230,12 @@ public class PostFragment extends Fragment {
         }
     }
 
-    public void getResults(String result, List<Post> arr) {
+    private void getResults(String result, List<Post> arr) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
                 //JSONObject response = root.getJSONObject("success");
                 JSONArray data = root.getJSONArray("data");
-                List<Post> posts = new ArrayList<>();
                 for(int i = 0; i < data.length(); i++) {
                     JSONObject jsonPost = data.getJSONObject(i);
                     Post tempPost = new Post(jsonPost.getString("postlocation")
@@ -278,13 +254,6 @@ public class PostFragment extends Fragment {
             e.printStackTrace();
             Log.i("MSG", e.getMessage());
         }
-    }
-
-    public void removeLoadingFragment() {
-        getActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .remove(getActivity().getSupportFragmentManager().findFragmentByTag("LOAD"))
-                .commit();
     }
 
     /**

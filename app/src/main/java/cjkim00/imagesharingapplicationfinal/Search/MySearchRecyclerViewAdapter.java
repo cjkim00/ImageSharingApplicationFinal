@@ -65,7 +65,8 @@ public class MySearchRecyclerViewAdapter extends RecyclerView.Adapter<MySearchRe
         StorageReference imageRef = storageRef.child(imageLocation);
 
         final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
             @Override
             public void onSuccess(byte[] bytes) {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);

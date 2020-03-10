@@ -11,15 +11,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Objects;
 
-import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -51,18 +47,13 @@ public class LoginFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_login, container, false);
         mEmail = v.findViewById(R.id.editText_email_login);
         mPassword = v.findViewById(R.id.editText_password_login);
-        Button registerButton = (Button) v.findViewById(R.id.button_register_login);
-        registerButton.setOnClickListener(v12 -> {
-            replaceFragment(new RegistrationFragment());
-        });
+        Button registerButton = v.findViewById(R.id.button_register_login);
+        registerButton.setOnClickListener(v12 -> replaceFragment(new RegistrationFragment()));
 
         Button loginButton = v.findViewById(R.id.button_login_login);
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(checkEditTextFields()) {
-                    loginUser();
-                }
+        loginButton.setOnClickListener(v1 -> {
+            if(checkEditTextFields()) {
+                loginUser();
             }
         });
 
@@ -82,26 +73,23 @@ public class LoginFragment extends Fragment {
         //updateUI(currentUser);//login with information from currentUser
     }
 
-    public void loginUser() {
+    private void loginUser() {
         String email = mEmail.getText().toString();
         String password = mPassword.getText().toString();
         mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(getActivity(), new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            Log.d("", "signInWithEmail:success");
-                            onLoginSuccess();
-                        } else {
-                            Log.w("", "signInWithEmail:failure", task.getException());
-                            Toast.makeText(getActivity(), "Login Failed",
-                                    Toast.LENGTH_LONG).show();
-                        }
+                .addOnCompleteListener(Objects.requireNonNull(getActivity()), task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("", "signInWithEmail:success");
+                        onLoginSuccess();
+                    } else {
+                        Log.w("", "signInWithEmail:failure", task.getException());
+                        Toast.makeText(getActivity(), "Login Failed",
+                                Toast.LENGTH_LONG).show();
                     }
                 });
     }
 
-    public boolean checkEditTextFields() {
+    private boolean checkEditTextFields() {
         boolean returnBool = true;
         String value = mEmail.getText().toString();
 
@@ -118,15 +106,15 @@ public class LoginFragment extends Fragment {
         return returnBool;
     }
 
-    public void onLoginSuccess() {
+    private void onLoginSuccess() {
         FirebaseUser user = mAuth.getCurrentUser();
         Intent intent = new Intent(getActivity(), ImageViewerActivity.class);
         intent.putExtra("User", user);
-        getActivity().startActivity(intent);
+        Objects.requireNonNull(getActivity()).startActivity(intent);
     }
 
-    public void replaceFragment(Fragment fragment) {
-        FragmentManager fragmentManager = getFragmentManager();
+    private void replaceFragment(Fragment fragment) {
+        FragmentManager fragmentManager = Objects.requireNonNull(getActivity()).getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
         fragmentTransaction.replace(((ViewGroup)(Objects.requireNonNull(getView()).getParent()))

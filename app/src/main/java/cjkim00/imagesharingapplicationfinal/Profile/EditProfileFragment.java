@@ -2,10 +2,13 @@ package cjkim00.imagesharingapplicationfinal.Profile;
 
 
 import android.content.Context;
+import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,17 +16,10 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,21 +30,19 @@ import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import cjkim00.imagesharingapplicationfinal.R;
-import cjkim00.imagesharingapplicationfinal.Search.Member;
-import cjkim00.imagesharingapplicationfinal.Search.MySearchRecyclerViewAdapter;
 
-/**
- * A simple {@link Fragment} subclass.
- */
+import static android.app.Activity.RESULT_OK;
+
+
 public class EditProfileFragment extends Fragment {
 
     private boolean mExists = false;
+    private boolean isActivityCalled;
 
     private String mEmail;
     private String mUsername;
@@ -60,11 +54,11 @@ public class EditProfileFragment extends Fragment {
     private EditText mEditUsername;
     private EditText mEditPassword;
     private EditText mEditDescription;
-    private Button mFinishEditButton;
 
     private OnProfileUpdatedListener mChangeListener;
     private OnEmailUpdatedListener mEmailChangedListener;
     private OnFinishedWithFragmentListener mFinishedListener;
+    private OnProfileImageChangedListener mProfileImageListener;
 
     public EditProfileFragment() {
         // Required empty public constructor
@@ -74,12 +68,12 @@ public class EditProfileFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Bundle args = getArguments();
-        mEmail = args.getString("Email");
+        mEmail = Objects.requireNonNull(args).getString("Email");
         mUsername = args.getString("Username");
         mDescription = args.getString("Description");
         mLocation = args.getString("Location");
 
-
+        isActivityCalled = false;
 
     }
 
@@ -96,43 +90,39 @@ public class EditProfileFragment extends Fragment {
         mEditUsername = view.findViewById(R.id.editText_edit_username_fragment_edit_profile);
         mEditPassword = view.findViewById(R.id.editText_edit_password_fragment_edit_profile);
         mEditDescription = view.findViewById(R.id.editText_edit_description_fragment_edit_profile);
-        mFinishEditButton = view.findViewById(R.id.button_complete_edit_fragment_edit_profile);
+        Button mFinishEditButton
+                = view.findViewById(R.id.button_complete_edit_fragment_edit_profile);
 
         setProfileImage(mEditProfileImage, mLocation);
         mEditEmail.setText(mEmail);
         mEditUsername.setText(mUsername);
         mEditDescription.setText(mDescription);
 
-        mFinishEditButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //check for changes
-                //commit those changes to firebase and the server
-                //go back to the user's profile page with the edited information by creating a new user profile fragmenmt
-                //updateUsername(mEditUsername.getText().toString());
-                //updateDescription(mEditDescription.getText().toString());
-//                mEmailChangedListener.onEmailUpdated(mEditEmail.getText().toString());
-//                updateEmail(mEditEmail.getText().toString());
-                if(checkForChanges()) {
-                    mChangeListener.onProfileUpdated(mEditUsername.getText().toString(), mEditDescription.getText().toString());
-                } else {
-                    mFinishedListener.onFinishedButtonPressed();
-                }
+        mFinishEditButton.setOnClickListener(v -> {
+            if(checkForChanges()) {
+                mChangeListener.onProfileUpdated(mEditUsername.getText().toString(),
+                        mEditDescription.getText().toString());
+            } else {
+                mFinishedListener.onFinishedButtonPressed();
             }
         });
 
-        mEditProfileImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //activity to select image from gallery
-            }
+        mEditProfileImage.setOnClickListener(v -> {
+            isActivityCalled = true;
+
+            Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+            photoPickerIntent.setType("image/*");
+            photoPickerIntent.putExtra("crop", "true");
+            photoPickerIntent.putExtra("aspectX", 0);
+            photoPickerIntent.putExtra("aspectY", 0);
+            startActivityForResult(photoPickerIntent, 1);
         });
 
         return view;
     }
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if(context instanceof OnProfileUpdatedListener) {
             mChangeListener = (OnProfileUpdatedListener) context;
@@ -143,6 +133,9 @@ public class EditProfileFragment extends Fragment {
         if(context instanceof OnFinishedWithFragmentListener) {
             mFinishedListener = (OnFinishedWithFragmentListener) context;
         }
+        if(context instanceof OnProfileImageChangedListener) {
+            mProfileImageListener = (OnProfileImageChangedListener) context;
+        }
     }
 
     @Override
@@ -151,28 +144,24 @@ public class EditProfileFragment extends Fragment {
         mChangeListener = null;
         mEmailChangedListener = null;
         mFinishedListener = null;
+        mProfileImageListener = null;
     }
 
     private void setProfileImage(ImageView imageView, String imageLocation) {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(imageLocation);
 
-        final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                imageView.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                // Handle any errors
-            }
+        //final long ONE_MEGABYTE = 1024 * 1024;
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            imageView.setImageBitmap(bitmap);
+        }).addOnFailureListener(exception -> {
+            // Handle any errors
         });
     }
 
-    public boolean checkForChanges() {
+    private boolean checkForChanges() {
         boolean exitFragment = false;
         String username = mEditUsername.getText().toString();
         if(username.length() > 0) {
@@ -217,7 +206,7 @@ public class EditProfileFragment extends Fragment {
         return exitFragment;
     }
 
-    public static boolean isValidEmail(CharSequence target) {
+    private static boolean isValidEmail(CharSequence target) {
         if (target == null) {
             return false;
         } else {
@@ -226,38 +215,34 @@ public class EditProfileFragment extends Fragment {
     }
 
 
-    public void updateEmail(String newEmail) {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("update_email")
-                            .build();
+    private void updateEmail(String newEmail) {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("update_email")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                    conn.setRequestProperty("Accept","application/json");
-                    conn.setDoOutput(true);
-                    conn.setDoInput(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept","application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("New_Email", newEmail);
-                    jsonParam.put("Email", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("New_Email", newEmail);
+                jsonParam.put("Email", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -268,41 +253,37 @@ public class EditProfileFragment extends Fragment {
         }
     }
 
-    public void updateUsername(String newUsername) {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("update_username")
-                            .build();
+    private void updateUsername(String newUsername) {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("update_username")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                    conn.setRequestProperty("Accept","application/json");
-                    conn.setDoOutput(true);
-                    conn.setDoInput(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept","application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("New_Username", newUsername);
-                    jsonParam.put("Email", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("New_Username", newUsername);
+                jsonParam.put("Email", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    Log.i("MSG2", "STATUS: " + String.valueOf(conn.getResponseCode()));
-                    Log.i("MSG2" , "MESSAGE: " + conn.getResponseMessage());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                Log.i("MSG2", "STATUS: " + conn.getResponseCode());
+                Log.i("MSG2" , "MESSAGE: " + conn.getResponseMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -314,41 +295,37 @@ public class EditProfileFragment extends Fragment {
     }
 
 
-    public void updateDescription(String newDescription)  {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("update_description")
-                            .build();
+    private void updateDescription(String newDescription)  {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("update_description")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                    conn.setRequestProperty("Accept","application/json");
-                    conn.setDoOutput(true);
-                    conn.setDoInput(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept","application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("New_Description", newDescription);
-                    jsonParam.put("Email", mEmail);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("New_Description", newDescription);
+                jsonParam.put("Email", mEmail);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    Log.i("MSG2", "STATUS: " + String.valueOf(conn.getResponseCode()));
-                    Log.i("MSG2" , "MESSAGE: " + conn.getResponseMessage());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                Log.i("MSG2", "STATUS: " + conn.getResponseCode());
+                Log.i("MSG2" , "MESSAGE: " + conn.getResponseMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -358,109 +335,141 @@ public class EditProfileFragment extends Fragment {
             e.printStackTrace();
         }
     }
-//    public void updateDescription(String newDescription) {
-//        Thread thread = new Thread( new Runnable() {
-//            @Override
-//            public void run() {
-//
-//                try {
-//                    HttpURLConnection urlConnection = null;
-//                    Uri uri = new Uri.Builder()
-//                            .scheme("https")
-//                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-//                            .appendPath("update_description")
-//                            .build();
-//
-//                    URL url = new URL(uri.toString());
-//                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//                    conn.setRequestMethod("POST");
-//                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-//                    conn.setRequestProperty("Accept","application/json");
-//                    conn.setDoOutput(true);
-//                    conn.setDoInput(true);
-//                    conn.setConnectTimeout(15000);
-//                    conn.setReadTimeout(15000);
-//
-//                    JSONObject jsonParam = new JSONObject();
-//                    jsonParam.put("New_Description", newDescription);
-//                    jsonParam.put("Email", mEmail);
-//                    Log.i("MSG5", "STATUS: " + String.valueOf(conn.getResponseCode()));
-//                    Log.i("MSG5" , "MESSAGE: " + conn.getResponseMessage());
-//                    Log.i("MSG5" , "EMAIL: " + mEmail + ", DESC: " + newDescription);
-//                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-//                    os.writeBytes(jsonParam.toString());
-//                    os.flush();
-//                    os.close();
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//        thread.start();
-//        try {
-//            thread.join();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        StorageReference storageRef = FirebaseStorage.getInstance().getReference();
+        if (resultCode == RESULT_OK && isActivityCalled) {
+            final Uri imageUri = data.getData();
+            StorageReference reference = storageRef.child(getRealPathFromURI(imageUri));
+            mEditProfileImage.setImageURI(imageUri);
+            reference.putFile(Objects.requireNonNull(imageUri))
+                    .addOnSuccessListener(taskSnapshot ->
+                            Toast.makeText(Objects.requireNonNull(getActivity())
+                                            .getApplicationContext()
+                            ,getRealPathFromURI(imageUri),Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(exception -> Toast
+                            .makeText(Objects.requireNonNull(getActivity()).getApplicationContext()
+                            ,"Image not uploaded",Toast.LENGTH_SHORT).show())
+                    .addOnCompleteListener(Objects.requireNonNull(getActivity()), task -> {
+                                uploadToDatabase(getRealPathFromURI(imageUri));
+                                isActivityCalled = false;
+                                mProfileImageListener.onProfileImageChanged(imageUri);
+                            });
+        }
+    }
+
+    private void uploadToDatabase(String location) {
+        Thread thread = new Thread(() -> {
+
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("change_profile_picture")
+                        .build();
+
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept","application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mEmail);
+                jsonParam.put("ImageLocation", location);
+
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
+
+                Log.i("MSG", "STATUS: " + conn.getResponseCode());
+                Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
+                //conn.connect();
+
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        thread.start();
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getRealPathFromURI(Uri contentURI) {
+        String result;
+        Cursor cursor = Objects.requireNonNull(getActivity()).getContentResolver()
+                .query(contentURI, null, null, null, null);
+        if (cursor == null) {
+            result = contentURI.getPath();
+        } else {
+            cursor.moveToFirst();
+            int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+            result = cursor.getString(idx);
+            cursor.close();
+        }
+        return result;
+    }
+
 
     private boolean checkIfUsernameExists(String username) throws InterruptedException {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("check_if_username_exists")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("check_if_username_exists")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", username);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", username);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    Log.i("MSG", "STATUS: " + os.toString());
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("MSG", sb.toString());
-                            mExists = getResults(sb.toString());
-//                            if(!exists) {
-//                                updateUsername(username);
-//                                Log.i("MSG5", "username changed");
-//                            } else {
-//                                mEditUsername.setError("Username already exists.");
-//                                Log.i("MSG5", "username exists");
-//                            }
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                Log.i("MSG", "STATUS: " + os.toString());
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("MSG", sb.toString());
+                        mExists = getResults(sb.toString());
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -468,7 +477,7 @@ public class EditProfileFragment extends Fragment {
         return mExists;
     }
 
-    public boolean getResults(String result) {
+    private boolean getResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
@@ -498,7 +507,10 @@ public class EditProfileFragment extends Fragment {
 
     public interface  OnEmailUpdatedListener {
         void onEmailUpdated(String newEmail);
+    }
 
+    public interface OnProfileImageChangedListener {
+        void onProfileImageChanged(Uri imageUri);
     }
 
 }

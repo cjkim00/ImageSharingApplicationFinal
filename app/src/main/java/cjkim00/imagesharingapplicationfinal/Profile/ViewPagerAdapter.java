@@ -8,7 +8,7 @@ import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
 
 public class ViewPagerAdapter extends FragmentStatePagerAdapter {
-    public ViewPagerAdapter(@NonNull FragmentManager fm, int behavior) {
+    ViewPagerAdapter(@NonNull FragmentManager fm, int behavior) {
         super(fm, behavior);
     }
 

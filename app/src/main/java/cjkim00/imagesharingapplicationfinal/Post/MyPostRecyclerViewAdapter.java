@@ -11,8 +11,6 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -42,9 +40,9 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
 
     private final OnListFragmentInteractionListener mListener;
 
-    public MyPostRecyclerViewAdapter(List<Post> posts, List<Post> likedPosts, OnListFragmentInteractionListener listener) {
+    MyPostRecyclerViewAdapter(List<Post> posts, List<Post> likedPosts, OnListFragmentInteractionListener listener) {
         //public MyPostRecyclerViewAdapter(List<Post> posts, OnListFragmentInteractionListener listener) {
-        mPosts = (ArrayList<Post>) posts;
+        mPosts = posts;
         mListener = listener;
         mLikedPosts = likedPosts;
         mPostIDs = new ArrayList<>();
@@ -52,6 +50,7 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
         convertPostListToIDList();
     }
 
+    @NonNull
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
@@ -73,34 +72,28 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
             holder.mLikeButton.setImageResource(R.drawable.ic_favorite_blue_24dp);
             holder.isLiked = false;
         }
-        holder.mLikeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(holder.isLiked) {
-                    removeLikeFromPost(holder.mPost.getPostID());
-                    holder.isLiked = false;
-                    holder.mLikeButton.setImageResource(R.drawable.ic_favorite_blue_24dp);
-                    Log.i("LIKE", "Removed Like");
-                } else {
-                    likePost(holder.mPost.getPostID());
-                    holder.isLiked = true;
-                    holder.mLikeButton.setImageResource(R.drawable.ic_favorite_red_24dp);
-                    Log.i("LIKE", "Added Like");
-                }
+        holder.mLikeButton.setOnClickListener(v -> {
+            if(holder.isLiked) {
+                removeLikeFromPost(holder.mPost.getPostID());
+                holder.isLiked = false;
+                holder.mLikeButton.setImageResource(R.drawable.ic_favorite_blue_24dp);
+                Log.i("LIKE", "Removed Like");
+            } else {
+                likePost(holder.mPost.getPostID());
+                holder.isLiked = true;
+                holder.mLikeButton.setImageResource(R.drawable.ic_favorite_red_24dp);
+                Log.i("LIKE", "Added Like");
             }
         });
 
         getImageFromStorage(holder.mImage, mPosts.get(position).getImageLocation(), holder.mPost);
 
 
-        holder.mView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (null != mListener) {
-                    // Notify the active callbacks interface (the activity, if the
-                    // fragment is attached to one) that an item has been selected.
-                    mListener.onListFragmentInteraction(holder.mPost);
-                }
+        holder.mView.setOnClickListener(v -> {
+            if (null != mListener) {
+                // Notify the active callbacks interface (the activity, if the
+                // fragment is attached to one) that an item has been selected.
+                mListener.onListFragmentInteraction(holder.mPost);
             }
         });
     }
@@ -112,143 +105,130 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
 
     }
 
-    public void getImageFromStorage(ImageView imageView, String location, Post post) {
+    private void getImageFromStorage(ImageView imageView, String location, Post post) {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(location);
-        final long ONE_MEGABYTE = 1024 * 1024;
+        //final long ONE_MEGABYTE = 1024 * 1024;
         final long FIFTEEN_MEGABYTES = 15360 * 15360;
-        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                imageView.setImageBitmap(bitmap);
-                post.setByteArray(bytes);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                //create empty bitmap to prevent crashes
-            }
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            imageView.setImageBitmap(bitmap);
+            post.setByteArray(bytes);
+        }).addOnFailureListener(exception -> {
+            //create empty bitmap to prevent crashes
         });
 
     }
 
-    public void convertPostListToIDList() {
+    private void convertPostListToIDList() {
         for(int i = 0; i < mPosts.size(); i++) {
             mPostIDs.add(mPosts.get(i).getPostID());
 
         }
-        //Log.i("MSGID", String.valueOf(mLikedPostIDs.size()) + ", ");
+
         for(int i = 0; i < mLikedPosts.size(); i++) {
             mLikedPostIDs.add(mLikedPosts.get(i).getPostID());
-            Log.i("MSGID", String.valueOf(mLikedPostIDs.get(i)) + ", ");
+            Log.i("MSGID", mLikedPostIDs.get(i) + ", ");
         }
     }
 
-    public boolean checkIfPostIsLiked(int postID) {
+    private boolean checkIfPostIsLiked(int postID) {
         return mLikedPostIDs.contains(postID);
     }
 
-    public void likePost(int postID) {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("like_post")
-                            .build();
+    private void likePost(int postID) {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("like_post")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("Email", ImageViewerActivity.mEmail);
-                    jsonParam.put("PostID", postID);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("Email", ImageViewerActivity.mEmail);
+                jsonParam.put("PostID", postID);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
     }
 
-    public void removeLikeFromPost(int postID) {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("remove_from_like_post")
-                            .build();
+    private void removeLikeFromPost(int postID) {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("remove_from_like_post")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("Email", ImageViewerActivity.mEmail);
-                    jsonParam.put("PostID", postID);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("Email", ImageViewerActivity.mEmail);
+                jsonParam.put("PostID", postID);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    class ViewHolder extends RecyclerView.ViewHolder {
         final View mView;
         final ImageView mImage;
         final TextView mDescView;
@@ -256,7 +236,6 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
         final TextView mViewsView;
         final ImageButton mLikeButton;
         private boolean isLiked;
-        private int postID;
 
         Post mPost;
 
@@ -270,10 +249,5 @@ public class MyPostRecyclerViewAdapter extends RecyclerView.Adapter<MyPostRecycl
             mLikeButton = view.findViewById(R.id.imageButton_like_post_fragment_post);
             isLiked = false;
         }
-
-        //@Override
-        //public String toString() {
-        //    return super.toString() + " '" + mContentView.getText() + "'";
-        //}
     }
 }

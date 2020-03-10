@@ -12,9 +12,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseUser;
@@ -26,7 +23,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Objects;
 
-import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -38,8 +34,6 @@ import cjkim00.imagesharingapplicationfinal.ImageView.ImageViewerActivity;
  */
 public class RegistrationFragment extends Fragment {
 
-
-    private final int PASSWORD_MIN_LENGTH = 8;
 
     private FirebaseAuth mAuth;
 
@@ -71,14 +65,11 @@ public class RegistrationFragment extends Fragment {
         mSecondPassword = v.findViewById(R.id.editText_second_password_registration);
 
         Button b = v.findViewById(R.id.button_finish_registration);
-        b.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(checkEditTextFields()) {
-                    registerUser();
-                }
-
+        b.setOnClickListener(v1 -> {
+            if(checkEditTextFields()) {
+                registerUser();
             }
+
         });
         return v;
     }
@@ -86,54 +77,45 @@ public class RegistrationFragment extends Fragment {
     public void onLoginSuccess(String email) {
         Intent intent = new Intent(getActivity(), ImageViewerActivity.class);
         intent.putExtra("email", email);
-        getActivity().startActivity(intent);
+        Objects.requireNonNull(getActivity()).startActivity(intent);
     }
 
-    public void registerUser() {
+    private void registerUser() {
         String email = mEmail.getText().toString();
         String username = mUsername.getText().toString();
         String password = mPassword.getText().toString();
         mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(getActivity(), new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d("", "createUserWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            //onLoginSuccess(user.getEmail());
-                            uploadToDatabase();
-                            replaceFragment(new LoginFragment());
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            FirebaseAuthException e = (FirebaseAuthException )task.getException();
-                            Log.w("Authentication Failed", "createUserWithEmail:failure", task.getException());
-                            Toast.makeText(getActivity(), "Authentication failed." + e.getMessage(),
-                                    Toast.LENGTH_SHORT).show();
-                        }
-
+                .addOnCompleteListener(Objects.requireNonNull(getActivity()), task -> {
+                    if (task.isSuccessful()) {
+                        // Sign in success, update UI with the signed-in user's information
+                        Log.d("", "createUserWithEmail:success");
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        uploadToDatabase();
+                        replaceFragment(new LoginFragment());
+                    } else {
+                        // If sign in fails, display a message to the user.
+                        FirebaseAuthException e = (FirebaseAuthException )task.getException();
+                        Toast.makeText(getActivity(), "Authentication failed."
+                                        + Objects.requireNonNull(e).getMessage(),
+                                Toast.LENGTH_SHORT).show();
                     }
+
                 });
     }
 
-    public boolean checkPasswordLength() {
+    private boolean checkPasswordLength() {
         String password = mPassword.getText().toString();
-        if(password.length() >= PASSWORD_MIN_LENGTH) {
-            return true;
-        }
-        return false;
+        int PASSWORD_MIN_LENGTH = 8;
+        return password.length() >= PASSWORD_MIN_LENGTH;
     }
 
-    public boolean checkIfPasswordsMatch() {
-        if(mPassword.getText().toString().equals(mSecondPassword.getText().toString())) {
-            return true;
-        }
-        return false;
+    private boolean checkIfPasswordsMatch() {
+        return mPassword.getText().toString().equals(mSecondPassword.getText().toString());
 
     }
 
 
-    public boolean checkEditTextFields() {
+    private boolean checkEditTextFields() {
         boolean returnBool = true;
         String value = mEmail.getText().toString();
         if(value.length() == 0) {
@@ -169,49 +151,46 @@ public class RegistrationFragment extends Fragment {
         return returnBool;
     }
 
-    public void uploadToDatabase() {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+    private void uploadToDatabase() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("Registration")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("Registration")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-                    conn.setRequestProperty("Accept","application/json");
-                    conn.setDoOutput(true);
-                    conn.setDoInput(true);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+                conn.setRequestProperty("Accept","application/json");
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("Email", mEmail.getText().toString());
-                    jsonParam.put("Username", mUsername.getText().toString());
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("Email", mEmail.getText().toString());
+                jsonParam.put("Username", mUsername.getText().toString());
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
-                    Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
+                Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
     }
 
-    public void replaceFragment(androidx.fragment.app.Fragment fragment) {
-        FragmentManager fragmentManager = getFragmentManager();
+    private void replaceFragment(androidx.fragment.app.Fragment fragment) {
+        FragmentManager fragmentManager =
+                Objects.requireNonNull(getActivity()).getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = Objects.requireNonNull(fragmentManager)
                 .beginTransaction();
 

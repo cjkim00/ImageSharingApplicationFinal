@@ -30,6 +30,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -56,7 +57,6 @@ public class ProfileFragment extends Fragment {
     private int mFollowing;
     private boolean mIsFollowing = false;
 
-    private static final String ARG_COLUMN_COUNT = "column-count";
     private int mColumnCount = 4;
     private ArrayList<Post> mUserPosts;
     private OnListFragmentInteractionListener mListener;
@@ -70,20 +70,12 @@ public class ProfileFragment extends Fragment {
     public ProfileFragment() {
     }
 
-    public static ProfileFragment newInstance(int columnCount) {
-        ProfileFragment fragment = new ProfileFragment();
-        Bundle args = new Bundle();
-        args.putInt(ARG_COLUMN_COUNT, columnCount);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Bundle bundle = this.getArguments();
 
-        mCurrentUser = bundle.getString("CurrentUser");
+        mCurrentUser = Objects.requireNonNull(bundle).getString("CurrentUser");
         mUsername = bundle.getString("Username");
         mDescription = bundle.getString("Description");
         mLocation = bundle.getString("Location");
@@ -112,7 +104,7 @@ public class ProfileFragment extends Fragment {
         RecyclerView mRecyclerView = view.findViewById(R.id.list_profile_posts_fragment_profile_list);
 
         DisplayMetrics displaymetrics = new DisplayMetrics();
-        getActivity().getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        Objects.requireNonNull(getActivity()).getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         int height = displaymetrics.heightPixels;
         int width = displaymetrics.widthPixels;
         view.setMinimumWidth(width);
@@ -125,12 +117,7 @@ public class ProfileFragment extends Fragment {
         ImageView profileImage = view.findViewById(R.id.imageView_profile_image_fragment_profile);
         Button followOrUnfollowButton = view.findViewById(R.id.button_follow_or_unfollow_fragment_profile);
 
-        followOrUnfollowButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                updateButton(followOrUnfollowButton);
-            }
-        });
+        followOrUnfollowButton.setOnClickListener(v -> updateButton(followOrUnfollowButton));
 
         try {
             checkIfFollowing(followOrUnfollowButton);
@@ -145,7 +132,6 @@ public class ProfileFragment extends Fragment {
         following.setText("Following: " + mFollowing);
         // Set the adapter
         Context context = view.getContext();
-        //RecyclerView recyclerView = (RecyclerView) view;
         if (mColumnCount <= 1) {
             mRecyclerView.setLayoutManager(new LinearLayoutManager(context));
             Log.i("MSGVIEW", "Linear");
@@ -161,7 +147,7 @@ public class ProfileFragment extends Fragment {
 
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof OnListFragmentInteractionListener) {
             mListener = (OnListFragmentInteractionListener) context;
@@ -177,7 +163,7 @@ public class ProfileFragment extends Fragment {
         mListener = null;
     }
 
-    public void updateButton(Button button) {
+    private void updateButton(Button button) {
         if(mIsFollowing) {
             unfollowUser();
             button.setText("Follow");
@@ -190,166 +176,153 @@ public class ProfileFragment extends Fragment {
         // mIsFollowing = !mIsFollowing;
     }
 
-    public void followUser() {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("follow_user")
-                            .build();
+    private void followUser() {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("follow_user")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mCurrentUser);
-                    jsonParam.put("Following", mUsername);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mCurrentUser);
+                jsonParam.put("Following", mUsername);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            //setButton(sb.toString() , button);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        //setButton(sb.toString() , button);
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
     }
 
-    public void unfollowUser() {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("unfollow_user")
-                            .build();
+    private void unfollowUser() {
+        Thread thread = new Thread(() -> {
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("unfollow_user")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mCurrentUser);
-                    jsonParam.put("Following", mUsername);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mCurrentUser);
+                jsonParam.put("Following", mUsername);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            //setButton(sb.toString() , button);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        //setButton(sb.toString() , button);
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
     }
 
     private void checkIfFollowing(Button button) throws InterruptedException {
-        List<Member> tempArray = new ArrayList<>();
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("isUserFollowingMember")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("isUserFollowingMember")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mCurrentUser);
-                    jsonParam.put("Following", mUsername);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mCurrentUser);
+                jsonParam.put("Following", mUsername);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            setButton(sb.toString() , button);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        setButton(sb.toString() , button);
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
         thread.join();
     }
 
-    public void setButton(String result, Button button) {
+    private void setButton(String result, Button button) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success")) {
@@ -370,61 +343,57 @@ public class ProfileFragment extends Fragment {
     }
 
     private void getPostsFromUser(String user) throws InterruptedException {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_posts_from_user")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("get_posts_from_user")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", user);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", user);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("MSG6", "PROFILE FRAGMENT: " +sb.toString());
-                            getResults(sb.toString());
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("MSG6", "PROFILE FRAGMENT: " +sb.toString());
+                        getResults(sb.toString());
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
         thread.join();
     }
 
-    public void getResults(String result) {
+    private void getResults(String result) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {
@@ -453,18 +422,13 @@ public class ProfileFragment extends Fragment {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(imageLocation);
 
-        final long ONE_MEGABYTE = 1024 * 1024;
-        imageRef.getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                imageView.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                // Handle any errors
-            }
+        //final long ONE_MEGABYTE = 1024 * 1024;
+        final long FIFTEEN_MEGABYTES = 15360 * 15360;
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            imageView.setImageBitmap(bitmap);
+        }).addOnFailureListener(exception -> {
+            // Handle any errors
         });
     }
 

@@ -8,8 +8,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -25,17 +23,16 @@ public class MyViewFollowersRecyclerViewAdapter extends RecyclerView.Adapter<MyV
 
 
     public String mEmail;
-    private RecyclerView mRecyclerView;
     private final List<Member> mValues;
     private final OnListFragmentInteractionListener mListener;
 
-    public MyViewFollowersRecyclerViewAdapter(List<Member> items, OnListFragmentInteractionListener listener, RecyclerView recyclerView, String email) {
+    MyViewFollowersRecyclerViewAdapter(List<Member> items, OnListFragmentInteractionListener listener, String email) {
         mValues = items;
         mListener = listener;
-        mRecyclerView = recyclerView;
         mEmail = email;
     }
 
+    @NonNull
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
@@ -50,12 +47,9 @@ public class MyViewFollowersRecyclerViewAdapter extends RecyclerView.Adapter<MyV
         holder.mProfileDesc = mValues.get(position).getDescription();
         setProfileImage(holder.mProfileImage, mValues.get(position).getProfileImageLocation());
 
-        holder.mView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (null != mListener) {
-                    mListener.onListFragmentInteraction(holder.mItem);
-                }
+        holder.mView.setOnClickListener(v -> {
+            if (null != mListener) {
+                mListener.onListFragmentInteraction(holder.mItem);
             }
         });
     }
@@ -69,30 +63,24 @@ public class MyViewFollowersRecyclerViewAdapter extends RecyclerView.Adapter<MyV
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(imageLocation);
 
-        final long ONE_MEGABYTE = 1024 * 1024;
+        //final long ONE_MEGABYTE = 1024 * 1024;
         final long FIFTEEN_MEGABYTES = 15360 * 15360;
-        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                imageView.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                // Handle any errors
-            }
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            imageView.setImageBitmap(bitmap);
+        }).addOnFailureListener(exception -> {
+            // Handle any errors
         });
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        public final View mView;
-        public final ImageView mProfileImage;
+        final View mView;
+        final ImageView mProfileImage;
         public final TextView mUsername;
-        public String mProfileDesc;
-        public Member mItem;
+        String mProfileDesc;
+        Member mItem;
 
-        public ViewHolder(View view) {
+        ViewHolder(View view) {
             super(view);
             mView = view;
             mProfileImage = view.findViewById(R.id.imageView_profile_image_fragment_manage);

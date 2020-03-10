@@ -24,7 +24,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,7 +43,7 @@ public class SearchFragment extends Fragment {
 
     private static final String ARG_COLUMN_COUNT = "column-count";
     private int mColumnCount = 1;
-    public RecyclerView mRecyclerView;
+    private RecyclerView mRecyclerView;
     private EditText mSearch;
     //public MySearchRecyclerViewAdapter mAdapter;
     private List<Member> mMembers;
@@ -73,7 +75,7 @@ public class SearchFragment extends Fragment {
             mColumnCount = getArguments().getInt(ARG_COLUMN_COUNT);
         }
 
-        getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        Objects.requireNonNull(getActivity()).getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
 
 
     }
@@ -93,18 +95,11 @@ public class SearchFragment extends Fragment {
             mRecyclerView.setLayoutManager(new GridLayoutManager(context, mColumnCount));
         }
 
-        searchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                onButtonPress(v);
-
-            }
-        });
+        searchButton.setOnClickListener(v -> onButtonPress());
         return view;
     }
 
-    public void onButtonPress(View v) {
+    private void onButtonPress() {
         if(mSearch.getText().toString().length() != 0) {
             hideSoftKeyboard();
             try {
@@ -117,17 +112,20 @@ public class SearchFragment extends Fragment {
         }
     }
 
-    public void hideSoftKeyboard() {
-        InputMethodManager inputMethodManager = (InputMethodManager) getActivity().getSystemService(Activity.INPUT_METHOD_SERVICE);
+    private void hideSoftKeyboard() {
+        InputMethodManager inputMethodManager =
+                (InputMethodManager) Objects.requireNonNull(getActivity())
+                        .getSystemService(Activity.INPUT_METHOD_SERVICE);
         View focusedView = getActivity().getCurrentFocus();
         if(focusedView != null) {
-            inputMethodManager.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(), 0);
+            inputMethodManager.hideSoftInputFromWindow(getActivity()
+                    .getCurrentFocus().getWindowToken(), 0);
         }
     }
 
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof OnListFragmentInteractionListener) {
             mListener = (OnListFragmentInteractionListener) context;
@@ -145,55 +143,51 @@ public class SearchFragment extends Fragment {
 
     private void getMembers(String text) throws InterruptedException {
         List<Member> tempArray = new ArrayList<>();
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    HttpURLConnection urlConnection = null;
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("find_member")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("find_member")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", text);
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", text);
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    Log.i("MSG", "STATUS: " + os.toString());
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            Log.i("MSG", sb.toString());
-                            getResults(sb.toString() , tempArray);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                Log.i("MSG", "STATUS: " + os.toString());
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        Log.i("MSG", sb.toString());
+                        getResults(sb.toString() , tempArray);
                 }
+
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -202,7 +196,7 @@ public class SearchFragment extends Fragment {
         mRecyclerView.setAdapter(new MySearchRecyclerViewAdapter(tempArray, mListener));
     }
 
-    public void getResults(String result, List<Member> arr) {
+    private void getResults(String result, List<Member> arr) {
         try {
             JSONObject root = new JSONObject(result);
             if (root.has("success") && root.getBoolean("success") ) {

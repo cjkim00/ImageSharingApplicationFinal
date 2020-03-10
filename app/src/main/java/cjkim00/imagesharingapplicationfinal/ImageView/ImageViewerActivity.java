@@ -1,6 +1,5 @@
 package cjkim00.imagesharingapplicationfinal.ImageView;
 
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -16,19 +15,13 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
-import com.google.firebase.storage.UploadTask;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,7 +38,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -64,10 +56,10 @@ import cjkim00.imagesharingapplicationfinal.Post.ViewLikedPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Post.ViewUserPostsFragment;
 import cjkim00.imagesharingapplicationfinal.Profile.EditProfileFragment;
 import cjkim00.imagesharingapplicationfinal.Profile.ProfileFragment;
+import cjkim00.imagesharingapplicationfinal.Profile.UserProfileFragment;
 import cjkim00.imagesharingapplicationfinal.R;
 import cjkim00.imagesharingapplicationfinal.Search.Member;
 import cjkim00.imagesharingapplicationfinal.Search.SearchFragment;
-import cjkim00.imagesharingapplicationfinal.Profile.UserProfileFragment;
 
 public class ImageViewerActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -81,17 +73,16 @@ public class ImageViewerActivity extends AppCompatActivity
         EditProfileFragment.OnProfileUpdatedListener,
         EditProfileFragment.OnEmailUpdatedListener,
         EditProfileFragment.OnFinishedWithFragmentListener,
+        EditProfileFragment.OnProfileImageChangedListener,
         LoadingFragment.OnFragmentInteractionListener {
 
-    private StorageReference mStorageRef;
-    public String[] test = {"one", "two", "three", "four", "five"};
+    private boolean isActivityCalled;
     public static String mEmail;
     private String mProfileDescription;
     private String mUsername;
     private String mProfileImageLocation;
     private int mFollowers;
     private int mFollowing;
-    private static final int PICK_FROM_GALLERY = 2;
     FirebaseUser mUser;
 
     ImageView mUserProfileImage;
@@ -99,6 +90,8 @@ public class ImageViewerActivity extends AppCompatActivity
     TextView mUserFollowInfo;
 
     FloatingActionButton mFab;
+
+
 
 
     @Override
@@ -111,6 +104,8 @@ public class ImageViewerActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_viewer);
+
+        isActivityCalled = false;
         //addLoadingFragment();
 
         NavigationView navigationView = findViewById(R.id.nav_view);
@@ -126,6 +121,8 @@ public class ImageViewerActivity extends AppCompatActivity
         mFab = findViewById(R.id.fab);
         mFab.setImageResource(R.drawable.ic_add_white_24dp);
         mFab.setOnClickListener(view -> {
+            isActivityCalled = true;
+
             mFab.setVisibility(View.GONE);
             Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
             photoPickerIntent.setType("image/*");
@@ -137,7 +134,7 @@ public class ImageViewerActivity extends AppCompatActivity
 
         });
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
@@ -147,8 +144,8 @@ public class ImageViewerActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         Intent intent = getIntent();
-        mUser = (FirebaseUser) intent.getExtras().get("User");
-        mEmail = mUser.getEmail();
+        mUser = (FirebaseUser) Objects.requireNonNull(intent.getExtras()).get("User");
+        mEmail = Objects.requireNonNull(mUser).getEmail();
         Log.i("MSG1", "Email: " + mUser.getEmail() + ", " + mEmail);
         setUserInfo();
 
@@ -161,7 +158,7 @@ public class ImageViewerActivity extends AppCompatActivity
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
@@ -181,7 +178,6 @@ public class ImageViewerActivity extends AppCompatActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
         //noinspection SimplifiableIfStatement
         return super.onOptionsItemSelected(item);
     }
@@ -228,67 +224,57 @@ public class ImageViewerActivity extends AppCompatActivity
         } else if (id == R.id.nav_search) {
             mFab.setVisibility(View.GONE);
             replaceFragment(new SearchFragment());
-        } else if (id == R.id.nav_liked_posts) {
-
-        } else if (id == R.id.nav_settings) {
-            //replaceFragment(new SettingsFragment());
-            //replaceFragment(new LoadingFragment());
-        } else if (id == R.id.nav_log_out) {
-            //addLoadingFragment();
         }
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
     public void setUserInfo() {
-        Thread thread = new Thread( new Runnable() {
-            @Override
-            public void run() {
+        Thread thread = new Thread(() -> {
 
-                try {
-                    Uri uri = new Uri.Builder()
-                            .scheme("https")
-                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-                            .appendPath("get_user_info")
-                            .build();
+            try {
+                Uri uri = new Uri.Builder()
+                        .scheme("https")
+                        .appendPath("cjkim00-image-sharing-app.herokuapp.com")
+                        .appendPath("get_user_info")
+                        .build();
 
-                    URL url = new URL(uri.toString());
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                    conn.setUseCaches(false);
-                    conn.setAllowUserInteraction(false);
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
-                    conn.connect();
+                URL url = new URL(uri.toString());
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                conn.setUseCaches(false);
+                conn.setAllowUserInteraction(false);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                conn.connect();
 
-                    JSONObject jsonParam = new JSONObject();
-                    jsonParam.put("User", mUser.getEmail());
-                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-                    os.writeBytes(jsonParam.toString());
-                    os.flush();
-                    os.close();
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("User", mUser.getEmail());
+                DataOutputStream os = new DataOutputStream(conn.getOutputStream());
+                os.writeBytes(jsonParam.toString());
+                os.flush();
+                os.close();
 
-                    int status = conn.getResponseCode();
-                    Log.i("MSG1", "STATUS: " + os.toString());
-                    switch (status) {
-                        case 200:
-                        case 201:
-                            BufferedReader br = new BufferedReader(
-                                    new InputStreamReader(conn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            getResults(sb.toString());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                int status = conn.getResponseCode();
+                Log.i("MSG1", "STATUS: " + os.toString());
+                switch (status) {
+                    case 200:
+                    case 201:
+                        BufferedReader br = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
+                        br.close();
+                        getResults(sb.toString());
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
         thread.start();
@@ -311,8 +297,8 @@ public class ImageViewerActivity extends AppCompatActivity
             mFollowers = jsonObject.getInt("followerstotal");
             mFollowing = jsonObject.getInt("followingtotal");
             Log.i("MSG3" , mEmail + ", "  + mUsername + ", " + mProfileDescription + ", "
-                    + mProfileImageLocation + ", " + String.valueOf(mFollowers)
-                    + ", " + String.valueOf(mFollowing));
+                    + mProfileImageLocation + ", " + mFollowers
+                    + ", " + mFollowing);
 
             mUserUsername.setText(mUsername);
             mUserFollowInfo.setText("Followers: " + mFollowers + " Following: " + mFollowing);
@@ -325,19 +311,13 @@ public class ImageViewerActivity extends AppCompatActivity
     public void getUserProfileImage(String location) {
         StorageReference storageRef = FirebaseStorage.getInstance().getReference();
         StorageReference imageRef = storageRef.child(location);
-        final long ONE_MEGABYTE = 1024 * 1024;
+        //final long ONE_MEGABYTE = 1024 * 1024;
         final long FIFTEEN_MEGABYTES = 15360 * 15360;
-        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(new OnSuccessListener<byte[]>() {
-            @Override
-            public void onSuccess(byte[] bytes) {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                mUserProfileImage.setImageBitmap(bitmap);
-            }
-        }).addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception exception) {
-                //create empty bitmap to prevent crashes
-            }
+        imageRef.getBytes(FIFTEEN_MEGABYTES).addOnSuccessListener(bytes -> {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            mUserProfileImage.setImageBitmap(bitmap);
+        }).addOnFailureListener(exception -> {
+            //create empty bitmap to prevent crashes
         });
     }
 
@@ -382,7 +362,7 @@ public class ImageViewerActivity extends AppCompatActivity
     public void removeLoadingFragment() {
         getSupportFragmentManager()
                 .beginTransaction()
-                .remove(getSupportFragmentManager().findFragmentByTag("LOAD"))
+                .remove(Objects.requireNonNull(getSupportFragmentManager().findFragmentByTag("LOAD")))
                 .commit();
     }
 
@@ -390,12 +370,11 @@ public class ImageViewerActivity extends AppCompatActivity
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        mStorageRef = FirebaseStorage.getInstance().getReference();
-        if (resultCode == RESULT_OK) {
+        if (resultCode == RESULT_OK && isActivityCalled) {
             final Uri imageUri = data.getData();
-            StorageReference riversRef = mStorageRef.child(getRealPathFromURI(imageUri));
-            //mUserProfileImage.setImageURI(imageUri);
             try {
+                isActivityCalled = false;
+
                 Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
@@ -410,100 +389,21 @@ public class ImageViewerActivity extends AppCompatActivity
                 args.putString("Description", mProfileDescription);
                 args.putInt("Followers", mFollowers);
                 args.putInt("Following", mFollowing);
-                args.putString("Uri", imageUri.toString());
+                args.putString("Uri", Objects.requireNonNull(imageUri).toString());
                 Log.i("MSG7", "ORIGINAL: " + imageUri.toString());
+
                 UploadPostFragment uploadPostFragment = new UploadPostFragment();
                 uploadPostFragment.setArguments(args);
                 uploadPostFragment.setArguments(args);
-
                 addFragment(uploadPostFragment);
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-
-
-            //addFragment();
-
-
-//            riversRef.putFile(imageUri)
-//                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-//                        @Override
-//                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-//                            Toast.makeText(getApplicationContext()
-//                                    ,getRealPathFromURI(imageUri),Toast.LENGTH_SHORT).show();
-//                        }
-//                    })
-//                    .addOnFailureListener(new OnFailureListener() {
-//                        @Override
-//                        public void onFailure(@NonNull Exception exception) {
-//                            Toast.makeText(getApplicationContext()
-//                                    ,"Image not uploaded",Toast.LENGTH_SHORT).show();
-//                        }
-//                    }).addOnCompleteListener(this, new OnCompleteListener<UploadTask.TaskSnapshot>() {
-//                @Override
-//                public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
-//                    uploadToDatabase(getRealPathFromURI(imageUri));
-//                }
-//            });
         }
     }
 
-//    public void uploadToDatabase(String location) {
-//        Thread thread = new Thread( new Runnable() {
-//            @Override
-//            public void run() {
-//
-//                try {
-//                    HttpURLConnection urlConnection = null;
-//                    Uri uri = new Uri.Builder()
-//                            .scheme("https")
-//                            .appendPath("cjkim00-image-sharing-app.herokuapp.com")
-//                            .appendPath("InsertPost")
-//                            .build();
-//
-//                    URL url = new URL(uri.toString());
-//                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//                    conn.setRequestMethod("POST");
-//                    conn.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
-//                    conn.setRequestProperty("Accept","application/json");
-//                    conn.setDoOutput(true);
-//                    conn.setDoInput(true);
-//                    conn.setConnectTimeout(15000);
-//                    conn.setReadTimeout(15000);
-//
-//                    JSONObject jsonParam = new JSONObject();
-//                    jsonParam.put("PostLocation", location);
-//                    jsonParam.put("Email", mEmail);
-//                    jsonParam.put("Description", "Temporary Value");
-//                    jsonParam.put("Likes", 1);
-//                    jsonParam.put("Views", 1);
-//                    DataOutputStream os = new DataOutputStream(conn.getOutputStream());
-//                    os.writeBytes(jsonParam.toString());
-//                    os.flush();
-//                    os.close();
-//
-//                    Log.i("MSG", "STATUS: " + String.valueOf(conn.getResponseCode()));
-//                    Log.i("MSG" , "MESSAGE: " + conn.getResponseMessage());
-//                    //conn.connect();
-//
-//
-//
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-//        thread.start();
-//        try {
-//            thread.join();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//
     private String getRealPathFromURI(Uri contentURI) {
         String result;
         Cursor cursor = getContentResolver()
@@ -521,7 +421,7 @@ public class ImageViewerActivity extends AppCompatActivity
 
 
     public void hideSoftKeyboard() {
-        InputMethodManager inputMethodManager = (InputMethodManager) this.getSystemService(this.INPUT_METHOD_SERVICE);
+        InputMethodManager inputMethodManager = (InputMethodManager) this.getSystemService(INPUT_METHOD_SERVICE);
         View focusedView = this.getCurrentFocus();
 
         if(focusedView != null) {
@@ -631,19 +531,21 @@ public class ImageViewerActivity extends AppCompatActivity
     @Override
     public void onEmailUpdated(String newEmail) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        Log.i("MSG4", "EMAIL: " + user.getEmail());
+        Log.i("MSG4", "EMAIL: " + Objects.requireNonNull(user).getEmail());
         user.updateEmail(newEmail)
-                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (task.isSuccessful()) {
-                            Log.d("MSG4", "User email address updated.");
-                        }
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("MSG4", "User email address updated.");
                     }
                 });
 
         mUser = user;
         mEmail = mUser.getEmail();
+    }
+
+    @Override
+    public void onProfileImageChanged(Uri imageUri) {
+        mUserProfileImage.setImageURI(imageUri);
     }
 
 
